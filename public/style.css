@@ -110,9 +110,17 @@ body {
 .room-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 1.35fr) minmax(260px, 0.75fr);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.85fr) minmax(260px, 0.7fr);
+  grid-template-areas:
+    "center center right"
+    "left left right";
+  align-items: start;
   margin: 20px 0;
 }
+
+.left-panel { grid-area: left; }
+.center-panel { grid-area: center; }
+.right-panel { grid-area: right; }
 
 .room-topbar {
   display: flex;
@@ -828,6 +836,10 @@ body {
 @media (max-width: 1500px) {
   .room-grid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "center"
+      "left"
+      "right";
   }
 }
 
