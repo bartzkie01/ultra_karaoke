@@ -153,9 +153,10 @@ body {
 
 .music-browser-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
   gap: 20px;
   align-items: start;
+  overflow-x: auto;
 }
 
 .search-section,
@@ -751,19 +752,15 @@ body {
 }
 
 @media (max-width: 640px) {
-  .music-browser-layout {
-    grid-template-columns: 1fr;
-  }
-
   .music-browser-layout .search-section {
-    padding-right: 0;
-    padding-bottom: 18px;
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    padding-right: 20px;
+    padding-bottom: 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom: 0;
   }
 
   .music-browser-layout .discovery-section {
-    padding-top: 18px;
+    padding-top: 0;
   }
 }
 

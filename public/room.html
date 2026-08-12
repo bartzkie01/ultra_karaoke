@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IDS R06 Karaoke Room</title>
-  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="/style.css?v=20260813-3" />
 </head>
 <body>
   <div class="room-shell">
@@ -27,6 +27,7 @@
           <section class="search-section">
             <div class="section-label">Search Results</div>
             <div id="searchResults" class="item-list search-results"></div>
+            <button id="loadMoreSearchBtn" class="btn btn-secondary small load-more-btn" type="button">More Results</button>
           </section>
           <section class="discovery-section">
             <div class="section-label">Suggested Karaoke</div>
@@ -48,6 +49,7 @@
               <div id="duetPanel" class="tab-panel hide-panel">
                 <div class="section-label">Duet Karaoke</div>
                 <div id="duetSongsList" class="item-list"></div>
+                <button id="loadMoreDuetBtn" class="btn btn-secondary small load-more-btn" type="button">More Duets</button>
               </div>
             </div>
           </section>
@@ -127,6 +129,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="/app.js"></script>
+  <script src="/app.js?v=20260813-3"></script>
 </body>
 </html>

@@ -40,7 +40,9 @@ let pendingAdds = new Set();
 let currentPlaylist = [];
 let viralLimit = 8;
 let oldLimit = 6;
-let duetLimit = 6;
+let duetLimit = 4;
+let searchLimit = 8;
+let activeSearchQuery = 'karaoke';
 let searchController = null;
 let suggestionsController = null;
 let suggestionTimer = null;
@@ -536,7 +538,7 @@ function addSong(song) {
   });
 }
 
-async function fetchSearch(query) {
+async function fetchSearch(query, limit = 8) {
   if (!query) {
     await fetchViralSongs();
     return;
@@ -547,8 +549,10 @@ async function fetchSearch(query) {
   if (searchController) searchController.abort();
   const controller = new AbortController();
   searchController = controller;
+  activeSearchQuery = query;
+  searchLimit = limit;
   try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=${limit}`, { signal: controller.signal });
     if (!response.ok) {
       if (searchButton) searchButton.disabled = false;
       await fetchViralSongs();
@@ -676,7 +680,7 @@ function setupListeners() {
   searchButton.addEventListener('click', () => {
     const query = searchInput.value.trim();
     if (!query) return;
-    fetchSearch(query);
+    fetchSearch(query, 8);
   });
   searchInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -722,12 +726,21 @@ function setupListeners() {
   setActiveTab('viral');
   const refreshViralBtn = document.getElementById('refreshViralBtn');
   const loadMoreViralBtn = document.getElementById('loadMoreViralBtn');
+  const loadMoreSearchBtn = document.getElementById('loadMoreSearchBtn');
+  const loadMoreDuetBtn = document.getElementById('loadMoreDuetBtn');
+  loadMoreSearchBtn?.addEventListener('click', () => {
+    fetchSearch(activeSearchQuery || 'karaoke', Math.min(20, searchLimit + 6));
+  });
   refreshViralBtn?.addEventListener('click', async () => {
     await fetchViralSongs();
   });
   loadMoreViralBtn?.addEventListener('click', async () => {
     viralLimit = Math.min(20, viralLimit + 4);
     await fetchViralSongs();
+  });
+  loadMoreDuetBtn?.addEventListener('click', async () => {
+    duetLimit = Math.min(12, duetLimit + 3);
+    await fetchDuetSongs();
   });
 }
 
@@ -791,3 +804,4 @@ socket.on('connect_error', () => {
 
 setShareLink();
 setupListeners();
+fetchSearch('karaoke', 8);

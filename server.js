@@ -145,8 +145,8 @@ function mapSearchItems(items) {
     .filter((item) => item.thumbnail && isKaraokeTitle(item.title));
 }
 
-async function verifySearchResults(items) {
-  const candidates = items.slice(0, 12);
+async function verifySearchResults(items, limit = 8) {
+  const candidates = items.slice(0, Math.min(24, Math.max(12, limit * 2)));
   const results = await Promise.allSettled(
     candidates.map(async (item) => {
       const valid = await verifyYouTubeVideo(item.videoId, item.thumbnail);
@@ -280,11 +280,12 @@ function parseYouTubeResults(html) {
 
 app.get('/api/search', async (req, res) => {
   const query = (req.query.q || '').trim();
+  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
   if (!query) {
     res.json([]);
     return;
   }
-  const cacheKey = query.toLowerCase();
+  const cacheKey = `${query.toLowerCase()}:${limit}`;
   const cached = searchCache.get(cacheKey);
   if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
     res.json(cached.results);
@@ -294,13 +295,13 @@ app.get('/api/search', async (req, res) => {
   try {
     if (YOUTUBE_API_KEY) {
       const encoded = encodeURIComponent(searchPhrase);
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=16&key=${YOUTUBE_API_KEY}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=24&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
       let results = mapSearchItems(apiData.items || []);
       const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
-      results = sortByViewCount(results, stats).slice(0, 12);
-      const verified = await verifySearchResults(results);
-      const resultPayload = verified.slice(0, 10);
+      results = sortByViewCount(results, stats).slice(0, 24);
+      const verified = await verifySearchResults(results, limit);
+      const resultPayload = verified.slice(0, limit);
       searchCache.set(cacheKey, { createdAt: Date.now(), results: resultPayload });
       res.json(resultPayload);
       return;
@@ -320,8 +321,8 @@ app.get('/api/search', async (req, res) => {
     });
     const html = await response.text();
     const results = parseYouTubeResults(html);
-    const verified = await verifySearchResults(results);
-    const resultPayload = verified.slice(0, 8);
+    const verified = await verifySearchResults(results, limit);
+    const resultPayload = verified.slice(0, limit);
     searchCache.set(cacheKey, { createdAt: Date.now(), results: resultPayload });
     res.json(resultPayload);
   } catch (err) {
