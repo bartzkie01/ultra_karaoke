@@ -44,6 +44,7 @@ let duetLimit = 6;
 let searchController = null;
 let suggestionsController = null;
 let suggestionTimer = null;
+let autoAdvancePending = false;
 
 function setShareLink() {
   const shareUrl = `${window.location.origin}/room/${roomId}`;
@@ -298,13 +299,25 @@ function updateCurrent(current) {
     scoreDismissTimer = null;
   }
 
+  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') && (!userIsHost || ytPlayer);
   currentSong = current;
+  if (isCurrentSongAlreadyRendered) {
+    currentTitle.textContent = current.title;
+    return;
+  }
   if (!current) {
+    if (ytPlayer?.destroy) ytPlayer.destroy();
+    ytPlayer = null;
     currentTitle.textContent = 'Waiting for host to start';
     videoFrame.innerHTML = '<div class="video-placeholder">Host will start the karaoke video soon.</div>';
     return;
   }
   currentTitle.textContent = current.title;
+
+  // The player is tied to its container. Destroy it before replacing the
+  // container so the next reserved song always receives a live player.
+  if (ytPlayer?.destroy) ytPlayer.destroy();
+  ytPlayer = null;
 
   const emojis = getScoreEmojis(current.score);
   videoFrame.innerHTML = `
@@ -382,7 +395,8 @@ function createOrUpdatePlayer(videoId) {
     },
     events: {
       onReady: onPlayerReady,
-      onStateChange: onPlayerStateChange
+      onStateChange: onPlayerStateChange,
+      onError: onPlayerError
     }
   });
 }
@@ -407,6 +421,19 @@ function onPlayerReady(event) {
   if (pendingVideoId) {
     pendingVideoId = null;
   }
+}
+
+function advanceToNextSong(delay = 0) {
+  if (!userIsHost || autoAdvancePending) return;
+  autoAdvancePending = true;
+  setTimeout(() => {
+    socket.emit('next-song', { roomId });
+  }, delay);
+}
+
+function onPlayerError() {
+  notify('This YouTube video cannot play here. Skipping to the next song.');
+  advanceToNextSong(800);
 }
 
 function showScoreOverlay() {
@@ -454,9 +481,7 @@ function onPlayerStateChange(event) {
     }
     scoreDismissTimer = setTimeout(() => {
       hideScoreOverlay();
-      if (userIsHost && currentRoom?.playlist?.length) {
-        socket.emit('next-song', { roomId });
-      }
+      advanceToNextSong();
     }, 3200);
   }
 }
@@ -584,6 +609,11 @@ function setActiveTab(tabName) {
   const panels = document.querySelectorAll('.tab-panel');
   tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
   panels.forEach((panel) => panel.classList.toggle('hide-panel', panel.id !== `${tabName}Panel`));
+  if (tabName === 'viral' && !viralSongs.length) {
+    fetchViralSongs();
+    fetchOldSongs();
+  }
+  if (tabName === 'duet' && !duetSongs.length) fetchDuetSongs();
 }
 
 function triggerEmojiEffect(emoji) {
@@ -689,7 +719,7 @@ function setupListeners() {
   tabButtons.forEach((button) => {
     button.addEventListener('click', () => setActiveTab(button.dataset.tab));
   });
-  setActiveTab('reserved');
+  setActiveTab('viral');
   const refreshViralBtn = document.getElementById('refreshViralBtn');
   const loadMoreViralBtn = document.getElementById('loadMoreViralBtn');
   refreshViralBtn?.addEventListener('click', async () => {
@@ -725,6 +755,7 @@ socket.on('room-error', (message) => {
 });
 
 socket.on('room-state', (state) => {
+  autoAdvancePending = false;
   currentRoom = state;
   userIsHost = state.hostId === socket.id;
   setHostControls();
@@ -736,6 +767,7 @@ socket.on('room-state', (state) => {
 });
 
 socket.on('playlist-updated', (playlist) => {
+  if (currentRoom) currentRoom = { ...currentRoom, playlist: playlist || [] };
   renderPlaylist(playlist);
   // clear any pending adds that are now in the playlist
   try {

@@ -10,6 +10,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const rooms = new Map();
+const ROOM_INACTIVITY_MS = 2 * 60 * 60 * 1000;
 
 function makeRoomId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -32,7 +33,8 @@ function createRoom() {
     current: null,
     bannerVisible: false,
     hostId: null,
-    chat: []
+    chat: [],
+    lastActiveAt: Date.now()
   };
   rooms.set(id, room);
   return room;
@@ -94,6 +96,10 @@ async function fetchYouTubeApi(url) {
 function isKaraokeTitle(title) {
   const lower = title.toLowerCase();
   return (lower.includes('karaoke') || lower.includes('カラオケ') || lower.includes('karaoké')) && !NON_SONG_PATTERN.test(title);
+}
+
+function touchRoom(room) {
+  if (room) room.lastActiveAt = Date.now();
 }
 
 async function verifyYouTubeVideo(videoId, thumbnail) {
@@ -426,6 +432,7 @@ io.on('connection', (socket) => {
       socket.emit('room-error', 'Room not found');
       return;
     }
+    touchRoom(room);
 
     const isHost = !room.hostId;
     if (isHost) {
@@ -447,6 +454,7 @@ io.on('connection', (socket) => {
   socket.on('add-song', ({ roomId, song }) => {
     const room = rooms.get(roomId);
     if (!room || !song) return;
+    touchRoom(room);
     room.playlist.push({
       id: `${song.videoId}-${Date.now()}`,
       videoId: song.videoId,
@@ -465,6 +473,7 @@ io.on('connection', (socket) => {
   socket.on('remove-song', ({ roomId, songId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user) return;
     const target = room.playlist.find((song) => song.id === songId);
@@ -477,6 +486,7 @@ io.on('connection', (socket) => {
   socket.on('next-song', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user?.isHost) return;
     startNextSong(room);
@@ -486,6 +496,7 @@ io.on('connection', (socket) => {
   socket.on('stop-play', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user?.isHost) return;
     room.current = null;
@@ -496,6 +507,7 @@ io.on('connection', (socket) => {
   socket.on('trigger-emoji', ({ roomId, emoji }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user) return;
     io.to(roomId).emit('emoji-rain', emoji);
@@ -504,6 +516,7 @@ io.on('connection', (socket) => {
   socket.on('edit-singer', ({ roomId, songId, singer }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user?.isHost) return;
     const target = room.playlist.find((song) => song.id === songId);
@@ -515,6 +528,7 @@ io.on('connection', (socket) => {
   socket.on('request-next', ({ roomId }) => {
     const room = rooms.get(roomId);
     if (!room) return;
+    touchRoom(room);
     const user = room.users[socket.id];
     if (!user?.isHost) return;
     startNextSong(room);
@@ -525,6 +539,7 @@ io.on('connection', (socket) => {
     const room = rooms.get(roomId);
     const user = room?.users[socket.id];
     if (!room || !user) return;
+    touchRoom(room);
     const chatItem = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: user.name,
@@ -548,7 +563,7 @@ io.on('connection', (socket) => {
           }
         }
         if (Object.keys(room.users).length === 0) {
-          rooms.delete(room.id);
+          touchRoom(room);
           continue;
         }
         io.to(room.id).emit('user-list', Object.values(room.users));
@@ -557,6 +572,15 @@ io.on('connection', (socket) => {
     }
   });
 });
+
+setInterval(() => {
+  const now = Date.now();
+  for (const room of rooms.values()) {
+    if (Object.keys(room.users).length === 0 && now - room.lastActiveAt >= ROOM_INACTIVITY_MS) {
+      rooms.delete(room.id);
+    }
+  }
+}, 10 * 60 * 1000).unref();
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

@@ -143,6 +143,25 @@ body {
   margin: 16px 0 10px;
 }
 
+.search-section,
+.discovery-section,
+.reserved-section,
+.chat-section {
+  display: grid;
+  gap: 12px;
+}
+
+.search-section,
+.reserved-section {
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.discovery-section,
+.chat-section {
+  padding-top: 18px;
+}
+
 .tab-btn {
   border: 1px solid rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.05);
@@ -180,7 +199,9 @@ body {
 }
 
 .search-results {
-  margin-bottom: 20px;
+  margin-bottom: 0;
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 .added-label {
@@ -444,7 +465,7 @@ body {
 }
 
 .chat-list {
-  max-height: 330px;
+  max-height: 190px;
   overflow-y: auto;
 }
 
@@ -627,8 +648,8 @@ body {
 }
 
 .chat-list {
-  min-height: 260px;
-  max-height: 360px;
+  min-height: 130px;
+  max-height: 190px;
   overflow-y: auto;
 }
 
@@ -731,35 +752,43 @@ body {
 }
 
 .left-panel .tab-panels,
-.left-panel .playlist,
-.left-panel .item-list,
-.left-panel .search-results {
+.left-panel .item-list {
   overflow-y: auto;
   max-height: calc(100vh - 360px);
   padding-right: 8px;
 }
 
+.left-panel .search-results {
+  max-height: 320px;
+}
+
+.right-panel .playlist {
+  overflow-y: auto;
+  max-height: 300px;
+  padding-right: 8px;
+}
+
 .right-panel .chat-list {
   overflow-y: auto;
-  max-height: calc(100vh - 420px);
+  max-height: 190px;
   padding-right: 8px;
 }
 
 /* Custom, separate scrollbars */
 .left-panel .tab-panels::-webkit-scrollbar,
-.left-panel .playlist::-webkit-scrollbar,
 .left-panel .item-list::-webkit-scrollbar {
   width: 10px;
 }
 .left-panel .tab-panels::-webkit-scrollbar-thumb,
-.left-panel .playlist::-webkit-scrollbar-thumb,
 .left-panel .item-list::-webkit-scrollbar-thumb {
   background: rgba(112,214,255,0.12);
   border-radius: 999px;
 }
+.right-panel .playlist::-webkit-scrollbar,
 .right-panel .chat-list::-webkit-scrollbar {
   width: 10px;
 }
+.right-panel .playlist::-webkit-scrollbar-thumb,
 .right-panel .chat-list::-webkit-scrollbar-thumb {
   background: rgba(112,214,255,0.16);
   border-radius: 999px;
