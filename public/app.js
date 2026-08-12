@@ -36,6 +36,7 @@ let viralSongs = [];
 let oldSongs = [];
 let duetSongs = [];
 let searchResults = [];
+let pendingAdds = new Set();
 let currentPlaylist = [];
 let viralLimit = 8;
 let oldLimit = 6;
@@ -88,19 +89,32 @@ function renderPlaylist(playlist) {
     playlistEl.innerHTML = '<div class="song-card"><div class="song-copy"><strong>No reserved songs yet</strong><span>Search for karaoke videos to add.</span></div></div>';
     return;
   }
+  // determine which song is next (for label)
+  let nextVideoId = null;
+  try {
+    if (currentSong) {
+      const idx = currentPlaylist.findIndex((i) => i.videoId === currentSong.videoId);
+      if (idx >= 0 && idx + 1 < currentPlaylist.length) nextVideoId = currentPlaylist[idx + 1].videoId;
+    }
+  } catch (e) {}
   playlist.forEach((item) => {
     const card = document.createElement('div');
     card.className = 'song-card';
     const canRemove = userIsHost || item.addedBy === userName;
     const singerLabel = item.singer ? `<span class="playlist-singer">Singer: ${safeText(item.singer)}</span>` : '';
+    const playingLabel = (currentSong && item.videoId === currentSong.videoId) ? `<span class="playing-label">Playing</span>` : '';
+    const upnextLabel = (nextVideoId && item.videoId === nextVideoId) ? `<span class="upnext-label">Up next</span>` : '';
     card.innerHTML = `
       <div class="song-copy">
         <strong>${safeText(item.title)}</strong>
         <span>requested by ${safeText(item.addedBy || 'Guest')}</span>
         ${singerLabel}
+        ${playingLabel}
+        ${upnextLabel}
       </div>
       <div class="song-card-meta"></div>
     `;
+    if (currentSong && item.videoId === currentSong.videoId) card.classList.add('playing');
     const meta = card.querySelector('.song-card-meta');
     if (userIsHost) {
       const editBtn = document.createElement('button');
@@ -144,10 +158,11 @@ function isSongAdded(videoId) {
 
 function makeSongCard(song, options = {}) {
   const isAdded = isSongAdded(song.videoId);
+  const isPending = pendingAdds.has(song.videoId);
   const card = document.createElement('div');
   card.className = 'song-card';
   const singerInput = options.allowSinger ? `<input class="singer-name-input" placeholder="Singer name (optional)" value="${safeText(userName)}" />` : '';
-  const actionButton = isAdded ? `<span class="added-label">Added</span>` : `<button class="btn btn-secondary small">Add</button>`;
+  const actionButton = isAdded ? `<span class="added-label">Added</span>` : (isPending ? `<span class="added-label">Reserving...</span>` : `<button class="btn btn-secondary small">Add</button>`);
   card.innerHTML = `
     <img src="${safeText(song.thumbnail)}" alt="${safeText(song.title)}" />
     <div class="song-copy">
@@ -157,17 +172,14 @@ function makeSongCard(song, options = {}) {
     ${singerInput}
     <div class="song-card-meta">${actionButton}</div>
   `;
-  if (!isAdded) {
+  if (!isAdded && !isPending) {
     const button = card.querySelector('button');
     button.addEventListener('click', () => {
       const singer = options.allowSinger ? card.querySelector('.singer-name-input').value.trim() || userName : userName;
-      // guard against race: check again and notify if already added
-      if (isSongAdded(song.videoId)) {
-        notify('This song is already in the reserved playlist');
-        const meta = card.querySelector('.song-card-meta');
-        if (meta) meta.innerHTML = '<span class="added-label">Added</span>';
-        return;
-      }
+      // mark pending locally and update UI
+      pendingAdds.add(song.videoId);
+      const meta = card.querySelector('.song-card-meta');
+      if (meta) meta.innerHTML = '<span class="added-label">Reserving...</span>';
       addSong({ ...song, singer });
     });
   }
@@ -472,6 +484,8 @@ function clearScorePanelAfterDelay() {
 }
 
 function addSong(song) {
+  // mark pending locally in case caller didn't
+  if (song && song.videoId) pendingAdds.add(song.videoId);
   socket.emit('add-song', {
     roomId,
     song: {
@@ -488,14 +502,25 @@ async function fetchSearch(query) {
     await fetchViralSongs();
     return;
   }
-  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
+  const searchResultsEl = document.getElementById('searchResults');
+  if (searchResultsEl) searchResultsEl.innerHTML = '<div class="song-card"><strong>Searching…</strong></div>';
+  if (searchButton) searchButton.disabled = true;
+  try {
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    if (!response.ok) {
+      if (searchButton) searchButton.disabled = false;
+      await fetchViralSongs();
+      return;
+    }
+    const results = await response.json();
+    suggestionsEl.innerHTML = '';
+    renderSearchResults(results);
+  } catch (err) {
+    console.warn('Search failed', err);
     await fetchViralSongs();
-    return;
+  } finally {
+    if (searchButton) searchButton.disabled = false;
   }
-  const results = await response.json();
-  suggestionsEl.innerHTML = '';
-  renderSearchResults(results);
 }
 
 async function fetchViralSongs() {
@@ -684,10 +709,12 @@ socket.on('room-state', (state) => {
 
 socket.on('playlist-updated', (playlist) => {
   renderPlaylist(playlist);
-  // refresh visible song lists so Add buttons reflect reserved state
+  // clear any pending adds that are now in the playlist
   try {
-    renderSearchResults(searchResults || []);
+    (playlist || []).forEach((it) => pendingAdds.delete(it.videoId));
   } catch (e) {}
+  // refresh visible song lists so Add buttons reflect reserved state
+  try { renderSearchResults(searchResults || []); } catch (e) {}
   renderViralSongs();
   renderOldSongs();
   renderDuetSongs();

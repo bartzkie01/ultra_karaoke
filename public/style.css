@@ -840,3 +840,29 @@ body {
   opacity: 1;
   transform: translateY(0);
 }
+
+/* Playlist labels */
+.playing-label {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(94,242,183,0.12);
+  color: #dfffea;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.upnext-label {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(112,214,255,0.08);
+  color: #d8f7ff;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.song-card.playing {
+  border-color: rgba(94,242,183,0.22);
+  box-shadow: 0 12px 40px rgba(94,242,183,0.04);
+}
