@@ -73,6 +73,22 @@ function createRoom() {
   return room;
 }
 
+function createRoomWithId(id) {
+  const room = {
+    id,
+    users: {},
+    playlist: [],
+    current: null,
+    bannerVisible: false,
+    hostId: null,
+    chat: [],
+    lastActiveAt: Date.now()
+  };
+  rooms.set(id, room);
+  saveRoomsSoon();
+  return room;
+}
+
 function roomState(room) {
   return {
     roomId: room.id,
@@ -468,11 +484,13 @@ app.get('/api/suggestions', async (req, res) => {
 io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, name }) => {
     const normalizedRoomId = String(roomId || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const room = rooms.get(normalizedRoomId);
-    if (!room) {
-      socket.emit('room-error', 'Room not found');
+    if (!/^[A-HJ-NP-Z2-9]{6}$/.test(normalizedRoomId)) {
+      socket.emit('room-error', 'Invalid room code');
       return;
     }
+    // A server restart must not make a valid shared room URL unusable. If the
+    // persisted state is unavailable, recreate the empty room with its shared ID.
+    const room = rooms.get(normalizedRoomId) || createRoomWithId(normalizedRoomId);
     touchRoom(room);
 
     const isHost = !room.hostId;
