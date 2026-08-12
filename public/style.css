@@ -44,6 +44,125 @@ body {
   padding: 48px;
   border-radius: 32px;
   text-align: center;
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(22, 37, 66, 0.72), rgba(15, 22, 42, 0.54));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.hero-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.12), transparent 26%, transparent 70%, rgba(112, 214, 255, 0.1)),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 7px);
+  pointer-events: none;
+}
+
+.hero-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.home-shell {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.ambient-lights,
+.ambient-lights::before,
+.ambient-lights::after {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.ambient-lights {
+  width: 42vw;
+  height: 42vw;
+  max-width: 620px;
+  max-height: 620px;
+  top: -22vw;
+  left: -12vw;
+  background: radial-gradient(circle, rgba(112, 214, 255, 0.26), transparent 68%);
+  animation: driftLight 14s ease-in-out infinite alternate;
+}
+
+.ambient-lights::before,
+.ambient-lights::after {
+  content: '';
+}
+
+.ambient-lights::before {
+  width: 32vw;
+  height: 32vw;
+  right: -82vw;
+  top: 34vh;
+  background: radial-gradient(circle, rgba(133, 104, 255, 0.2), transparent 70%);
+  animation: driftLight 17s ease-in-out infinite alternate-reverse;
+}
+
+.ambient-lights::after {
+  width: 26vw;
+  height: 26vw;
+  left: 45vw;
+  top: 68vh;
+  background: radial-gradient(circle, rgba(94, 242, 183, 0.14), transparent 70%);
+  animation: driftLight 12s ease-in-out infinite alternate;
+}
+
+.particle-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.particle-field i {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(225, 247, 255, 0.9);
+  box-shadow: 0 0 16px rgba(112, 214, 255, 0.85);
+  animation: floatParticle 9s ease-in-out infinite;
+}
+
+.particle-field i:nth-child(1) { left: 8%; top: 18%; animation-delay: -2s; }
+.particle-field i:nth-child(2) { left: 19%; top: 70%; animation-delay: -7s; transform: scale(0.7); }
+.particle-field i:nth-child(3) { left: 30%; top: 34%; animation-delay: -4s; transform: scale(0.55); }
+.particle-field i:nth-child(4) { left: 43%; top: 86%; animation-delay: -1s; }
+.particle-field i:nth-child(5) { left: 55%; top: 12%; animation-delay: -5s; transform: scale(0.7); }
+.particle-field i:nth-child(6) { left: 67%; top: 63%; animation-delay: -8s; transform: scale(0.6); }
+.particle-field i:nth-child(7) { left: 76%; top: 26%; animation-delay: -3s; }
+.particle-field i:nth-child(8) { left: 89%; top: 78%; animation-delay: -6s; transform: scale(0.75); }
+.particle-field i:nth-child(9) { left: 94%; top: 39%; animation-delay: -4.5s; transform: scale(0.5); }
+.particle-field i:nth-child(10) { left: 4%; top: 91%; animation-delay: -1.5s; transform: scale(0.6); }
+.particle-field i:nth-child(11) { left: 38%; top: 7%; animation-delay: -6.5s; transform: scale(0.45); }
+.particle-field i:nth-child(12) { left: 82%; top: 5%; animation-delay: -2.5s; transform: scale(0.7); }
+
+@keyframes floatParticle {
+  0%, 100% { opacity: 0.2; translate: 0 0; }
+  50% { opacity: 0.95; translate: 0 -24px; }
+}
+
+@keyframes driftLight {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(48px, 28px, 0) scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-lights,
+  .ambient-lights::before,
+  .ambient-lights::after,
+  .particle-field i {
+    animation: none;
+  }
 }
 
 .hero-card h1 {
