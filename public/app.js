@@ -1,5 +1,5 @@
 const socket = io();
-const roomId = window.location.pathname.split('/').pop();
+const roomId = decodeURIComponent(window.location.pathname).split('/').filter(Boolean).pop().toUpperCase().replace(/[^A-Z0-9]/g, '');
 const nameModal = document.getElementById('nameModal');
 const nameInput = document.getElementById('nameInput');
 const joinBtn = document.getElementById('joinBtn');

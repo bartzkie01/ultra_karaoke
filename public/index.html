@@ -32,8 +32,12 @@
       const code = prompt('Enter room code or link');
       if (!code) return;
       const trimmed = code.trim();
-      const match = trimmed.match(/([A-Z0-9]{6})$/i);
-      const roomId = match ? match[1].toUpperCase() : trimmed.toUpperCase();
+      const match = trimmed.match(/([A-Z0-9]{6})(?:\/?(?:[?#].*)?)?$/i) || trimmed.match(/([A-Z0-9]{6})/i);
+      if (!match) {
+        alert('Enter a valid 6-character room code or room link.');
+        return;
+      }
+      const roomId = match[1].toUpperCase();
       window.location.href = `/room/${roomId}`;
     });
   </script>

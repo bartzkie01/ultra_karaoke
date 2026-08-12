@@ -1,4 +1,5 @@
 const path = require('path');
+const fs = require('fs');
 const express = require('express');
 const http = require('http');
 const vm = require('vm');
@@ -11,6 +12,37 @@ const io = new Server(server);
 
 const rooms = new Map();
 const ROOM_INACTIVITY_MS = 2 * 60 * 60 * 1000;
+const ROOMS_STORE_FILE = path.join(__dirname, 'data', 'rooms.json');
+let roomSaveTimer = null;
+
+function saveRoomsSoon() {
+  if (roomSaveTimer) return;
+  roomSaveTimer = setTimeout(() => {
+    roomSaveTimer = null;
+    try {
+      fs.mkdirSync(path.dirname(ROOMS_STORE_FILE), { recursive: true });
+      const savedRooms = [...rooms.values()].map(({ users, hostId, ...room }) => room);
+      fs.writeFileSync(ROOMS_STORE_FILE, JSON.stringify(savedRooms), 'utf8');
+    } catch (err) {
+      console.warn('Unable to save karaoke rooms:', err.message);
+    }
+  }, 250);
+  roomSaveTimer.unref();
+}
+
+function loadSavedRooms() {
+  try {
+    const savedRooms = JSON.parse(fs.readFileSync(ROOMS_STORE_FILE, 'utf8'));
+    if (!Array.isArray(savedRooms)) return;
+    const now = Date.now();
+    savedRooms.forEach((room) => {
+      if (!room?.id || now - (room.lastActiveAt || 0) >= ROOM_INACTIVITY_MS) return;
+      rooms.set(room.id, { ...room, users: {}, hostId: null, lastActiveAt: now });
+    });
+  } catch (err) {
+    if (err.code !== 'ENOENT') console.warn('Unable to load saved karaoke rooms:', err.message);
+  }
+}
 
 function makeRoomId() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -37,6 +69,7 @@ function createRoom() {
     lastActiveAt: Date.now()
   };
   rooms.set(id, room);
+  saveRoomsSoon();
   return room;
 }
 
@@ -70,6 +103,8 @@ function startNextSong(room) {
   room.bannerVisible = true;
 }
 
+loadSavedRooms();
+app.set('trust proxy', 1);
 app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 app.use(express.json());
 
@@ -99,7 +134,10 @@ function isKaraokeTitle(title) {
 }
 
 function touchRoom(room) {
-  if (room) room.lastActiveAt = Date.now();
+  if (room) {
+    room.lastActiveAt = Date.now();
+    saveRoomsSoon();
+  }
 }
 
 async function verifyYouTubeVideo(videoId, thumbnail) {
@@ -185,8 +223,9 @@ app.get('/room/:roomId', (req, res) => {
 });
 
 app.get('/qr/:roomId', async (req, res) => {
-  const roomId = req.params.roomId;
-  const baseUrl = `${req.protocol}://${req.get('host')}`;
+  const roomId = String(req.params.roomId || '').trim().toUpperCase();
+  const forwardedProtocol = req.get('x-forwarded-proto')?.split(',')[0];
+  const baseUrl = `${forwardedProtocol || req.protocol}://${req.get('host')}`;
   const url = `${baseUrl}/room/${roomId}`;
   try {
     const svg = await QRCode.toString(url, { type: 'svg', width: 240 });
@@ -428,7 +467,8 @@ app.get('/api/suggestions', async (req, res) => {
 
 io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, name }) => {
-    const room = rooms.get(roomId);
+    const normalizedRoomId = String(roomId || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const room = rooms.get(normalizedRoomId);
     if (!room) {
       socket.emit('room-error', 'Room not found');
       return;
@@ -446,10 +486,10 @@ io.on('connection', (socket) => {
       isHost
     };
 
-    socket.join(roomId);
-    io.to(roomId).emit('room-state', roomState(room));
-    io.to(roomId).emit('user-list', Object.values(room.users));
-    io.to(roomId).emit('chat-update', room.chat);
+    socket.join(normalizedRoomId);
+    io.to(normalizedRoomId).emit('room-state', roomState(room));
+    io.to(normalizedRoomId).emit('user-list', Object.values(room.users));
+    io.to(normalizedRoomId).emit('chat-update', room.chat);
   });
 
   socket.on('add-song', ({ roomId, song }) => {
@@ -579,6 +619,7 @@ setInterval(() => {
   for (const room of rooms.values()) {
     if (Object.keys(room.users).length === 0 && now - room.lastActiveAt >= ROOM_INACTIVITY_MS) {
       rooms.delete(room.id);
+      saveRoomsSoon();
     }
   }
 }, 10 * 60 * 1000).unref();
