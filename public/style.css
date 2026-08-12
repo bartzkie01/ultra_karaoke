@@ -229,10 +229,8 @@ body {
 .room-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.85fr) minmax(260px, 0.7fr);
-  grid-template-areas:
-    "center center right"
-    "left left right";
+  grid-template-columns: minmax(260px, 0.78fr) minmax(480px, 1.55fr) minmax(300px, 0.9fr);
+  grid-template-areas: "left center right";
   align-items: start;
   margin: 20px 0;
 }
@@ -988,7 +986,7 @@ body {
   display: none !important;
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 1180px) {
   .room-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
