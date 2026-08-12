@@ -325,6 +325,7 @@ function updateCurrent(current) {
 
   const emojis = getScoreEmojis(current.score);
   videoFrame.innerHTML = `
+    ${userIsHost ? '<div class="host-watermark" aria-hidden="true">Ultra Karaoke</div>' : ''}
     <div class="score-panel" id="scorePanel">
       <h3>Stage applause!</h3>
       <div class="score-value">${current.score}</div>

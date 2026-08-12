@@ -813,6 +813,23 @@ body {
   }
 }
 
+.host-watermark {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  color: #fff;
+  opacity: 0.48;
+  font-size: clamp(0.7rem, 1.35vw, 0.95rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.95);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .music-browser-layout .search-section {
     padding-right: 20px;
