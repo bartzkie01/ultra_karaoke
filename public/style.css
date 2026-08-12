@@ -408,15 +408,18 @@ body {
 
 .song-card {
   display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
-  padding: 14px;
+  padding: 10px;
 }
 
 .song-card img {
-  width: 100%;
-  border-radius: 16px;
+  width: 96px;
+  height: 64px;
+  border-radius: 10px;
   object-fit: cover;
-  min-height: 140px;
+  min-height: 0;
 }
 
 .song-card .song-copy {
@@ -438,7 +441,7 @@ body {
 .song-card .song-copy {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .song-copy strong {
@@ -454,6 +457,39 @@ body {
 .chat-input-row button,
 .users-card button {
   min-width: 96px;
+}
+
+.song-card .singer-name-input {
+  grid-column: 2 / -1;
+  margin: 0;
+}
+
+.song-card .song-card-meta {
+  justify-self: end;
+}
+
+.playlist .song-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+@media (max-width: 640px) {
+  .song-card {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+
+  .song-card img {
+    width: 82px;
+    height: 56px;
+  }
+
+  .song-card .song-card-meta {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .song-card .singer-name-input {
+    grid-column: 1 / -1;
+  }
 }
 
 .video-frame {
