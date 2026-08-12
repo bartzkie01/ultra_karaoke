@@ -581,7 +581,7 @@ async function fetchSearch(query, limit = 8) {
 async function fetchViralSongs() {
   viralSongs = [];
   renderViralSongs();
-  const response = await fetch(`/api/viral?limit=${viralLimit}`);
+  const response = await fetch(`/api/viral?limit=${viralLimit}&room=${encodeURIComponent(roomId)}`);
   if (!response.ok) {
     viralList.innerHTML = '<div class="song-card"><strong>Unable to load viral karaoke.</strong></div>';
     return;
@@ -593,7 +593,7 @@ async function fetchViralSongs() {
 async function fetchOldSongs() {
   oldSongs = [];
   renderOldSongs();
-  const response = await fetch(`/api/old-songs?limit=${oldLimit}`);
+  const response = await fetch(`/api/old-songs?limit=${oldLimit}&room=${encodeURIComponent(roomId)}`);
   if (!response.ok) {
     oldSongs = [];
     renderOldSongs();
@@ -606,7 +606,7 @@ async function fetchOldSongs() {
 async function fetchDuetSongs() {
   duetSongs = [];
   renderDuetSongs();
-  const response = await fetch(`/api/duet-songs?limit=${duetLimit}`);
+  const response = await fetch(`/api/duet-songs?limit=${duetLimit}&room=${encodeURIComponent(roomId)}`);
   if (!response.ok) {
     duetSongs = [];
     renderDuetSongs();

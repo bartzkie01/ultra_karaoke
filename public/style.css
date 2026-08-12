@@ -110,7 +110,7 @@ body {
 .room-grid {
   display: grid;
   gap: 20px;
-  grid-template-columns: minmax(600px, 1fr) minmax(380px, 1.2fr) minmax(280px, 0.7fr);
+  grid-template-columns: minmax(0, 1.1fr) minmax(360px, 1.35fr) minmax(260px, 0.75fr);
   margin: 20px 0;
 }
 
@@ -216,10 +216,27 @@ body {
 
 .music-browser-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 1fr) minmax(260px, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
   align-items: start;
   min-width: 0;
+}
+
+.left-panel,
+.music-browser-layout,
+.search-section,
+.discovery-section,
+.tab-panels,
+.tab-panel,
+.item-list,
+.song-card,
+.song-copy {
+  min-width: 0;
+}
+
+.song-copy strong,
+.song-copy span {
+  overflow-wrap: anywhere;
 }
 
 .search-section,

@@ -371,9 +371,17 @@ app.get('/api/search', async (req, res) => {
 
 app.get('/api/viral', async (req, res) => {
   const limit = Math.min(20, parseInt(req.query.limit, 10) || 8);
+  const roomId = String(req.query.room || '');
+  const viralQueries = [
+    'karaoke popular hits',
+    'karaoke sing along hits',
+    'best karaoke songs lyrics',
+    'popular karaoke versions'
+  ];
+  const queryIndex = hashRoomId(roomId) % viralQueries.length;
   try {
     if (YOUTUBE_API_KEY) {
-      const query = encodeURIComponent('karaoke popular hits');
+      const query = encodeURIComponent(viralQueries[queryIndex]);
       const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${query}&maxResults=${Math.min(limit, 16)}&order=viewCount&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
       let results = mapSearchItems(apiData.items || []);
@@ -387,7 +395,7 @@ app.get('/api/viral', async (req, res) => {
     console.warn('YouTube API viral search failed:', err.message);
   }
 
-  const query = 'popular karaoke hits';
+  const query = viralQueries[queryIndex];
   const encoded = encodeURIComponent(query);
   const url = `https://www.youtube.com/results?search_query=${encoded}`;
   try {
@@ -406,7 +414,17 @@ app.get('/api/viral', async (req, res) => {
   }
 });
 
-function sampleSongs(type, limit = 8) {
+function hashRoomId(roomId) {
+  return [...String(roomId)].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 0);
+}
+
+function rotateSongs(songs, roomId, limit) {
+  if (!songs.length) return [];
+  const offset = hashRoomId(roomId) % songs.length;
+  return [...songs.slice(offset), ...songs.slice(0, offset)].slice(0, limit);
+}
+
+function sampleSongs(type, roomId, limit = 8) {
   const samples = {
     old: [
       { videoId: '3HAN0Xbqigc', title: 'Bohemian Rhapsody - Karaoke Version', thumbnail: 'https://i.ytimg.com/vi/3HAN0Xbqigc/hqdefault.jpg' },
@@ -429,17 +447,23 @@ function sampleSongs(type, limit = 8) {
       { videoId: 'e-ORhEE9VVg', title: 'Love The Way You Lie Karaoke', thumbnail: 'https://i.ytimg.com/vi/e-ORhEE9VVg/hqdefault.jpg' }
     ]
   };
-  return (samples[type] || []).slice(0, limit);
+  return rotateSongs(samples[type] || [], roomId, limit);
 }
 
-app.get('/api/old-songs', (req, res) => {
+async function verifiedSampleSongs(type, roomId, limit) {
+  const samples = sampleSongs(type, roomId, limit);
+  const verified = await verifySearchResults(samples, limit);
+  return verified.slice(0, limit);
+}
+
+app.get('/api/old-songs', async (req, res) => {
   const limit = Math.min(12, parseInt(req.query.limit, 10) || 6);
-  res.json(sampleSongs('old', limit));
+  res.json(await verifiedSampleSongs('old', String(req.query.room || ''), limit));
 });
 
-app.get('/api/duet-songs', (req, res) => {
+app.get('/api/duet-songs', async (req, res) => {
   const limit = Math.min(12, parseInt(req.query.limit, 10) || 6);
-  res.json(sampleSongs('duet', limit));
+  res.json(await verifiedSampleSongs('duet', String(req.query.room || ''), limit));
 });
 
 app.get('/api/suggestions', async (req, res) => {
