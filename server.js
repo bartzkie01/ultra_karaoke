@@ -73,22 +73,6 @@ function createRoom() {
   return room;
 }
 
-function createRoomWithId(id) {
-  const room = {
-    id,
-    users: {},
-    playlist: [],
-    current: null,
-    bannerVisible: false,
-    hostId: null,
-    chat: [],
-    lastActiveAt: Date.now()
-  };
-  rooms.set(id, room);
-  saveRoomsSoon();
-  return room;
-}
-
 function roomState(room) {
   return {
     roomId: room.id,
@@ -488,9 +472,11 @@ io.on('connection', (socket) => {
       socket.emit('room-error', 'Invalid room code');
       return;
     }
-    // A server restart must not make a valid shared room URL unusable. If the
-    // persisted state is unavailable, recreate the empty room with its shared ID.
-    const room = rooms.get(normalizedRoomId) || createRoomWithId(normalizedRoomId);
+    const room = rooms.get(normalizedRoomId);
+    if (!room) {
+      socket.emit('room-error', 'This room has expired or is unavailable. Ask the host for a new link.');
+      return;
+    }
     touchRoom(room);
 
     const isHost = !room.hostId;

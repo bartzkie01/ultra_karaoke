@@ -301,7 +301,9 @@ function updateCurrent(current) {
     scoreDismissTimer = null;
   }
 
-  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') && (!userIsHost || ytPlayer);
+  const participantPlaceholder = document.querySelector('#playerContainer .video-placeholder');
+  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') &&
+    ((userIsHost && ytPlayer) || (!userIsHost && !ytPlayer && participantPlaceholder));
   currentSong = current;
   if (isCurrentSongAlreadyRendered) {
     currentTitle.textContent = current.title;
@@ -770,7 +772,12 @@ socket.on('room-error', (message) => {
 socket.on('room-state', (state) => {
   autoAdvancePending = false;
   currentRoom = state;
+  const wasHost = userIsHost;
   userIsHost = state.hostId === socket.id;
+  if (wasHost && !userIsHost && ytPlayer?.destroy) {
+    ytPlayer.destroy();
+    ytPlayer = null;
+  }
   setHostControls();
   updateParticipantView();
   renderPlaylist(state.playlist);
