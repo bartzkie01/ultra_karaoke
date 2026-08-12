@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Ultra Karaoke</title>
-  <link rel="stylesheet" href="/style.css?v=20260813-7" />
+  <link rel="stylesheet" href="/style.css?v=20260813-8" />
 </head>
 <body>
   <div class="room-shell">
@@ -57,6 +57,16 @@
         <div class="video-footer">
           <div class="score-description">Live score appears after each karaoke video starts.</div>
         </div>
+        <section class="center-chat-section">
+          <div class="panel-header">
+            <h2>Public Chat</h2>
+          </div>
+          <div class="chat-list" id="chatList"></div>
+          <div class="chat-input-row">
+            <input id="chatInput" placeholder="Type a message" />
+            <button id="sendChat" class="btn btn-primary">Send</button>
+          </div>
+        </section>
       </main>
 
       <aside class="panel right-panel glass-panel" id="rightPanel">
@@ -94,9 +104,6 @@
           <div id="playlist" class="playlist"></div>
         </section>
         <section class="chat-section">
-        <div class="panel-header">
-          <h2>Chat Room</h2>
-        </div>
         <div class="room-code-display">Room code: <strong id="roomCodeDisplay"></strong></div>
         <div class="share-card">
           <div class="share-row">
@@ -106,11 +113,6 @@
           <div class="qr-block">
             <img id="qrCode" alt="QR Code" />
           </div>
-        </div>
-        <div class="chat-list" id="chatList"></div>
-        <div class="chat-input-row">
-          <input id="chatInput" placeholder="Type a message" />
-          <button id="sendChat" class="btn btn-primary">Send</button>
         </div>
         </section>
         <div class="users-card">
