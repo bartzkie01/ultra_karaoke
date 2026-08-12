@@ -362,6 +362,8 @@ body {
 .song-copy strong,
 .song-copy span {
   overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .search-section,
@@ -570,10 +572,21 @@ body {
   font-size: 0.88rem;
 }
 
+.song-copy {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
 .song-card button,
 .chat-input-row button,
 .users-card button {
   min-width: 96px;
+}
+
+.song-card .btn {
+  min-width: auto;
+  padding: 8px 12px;
+  font-size: 0.85rem;
 }
 
 .song-card .singer-name-input {
@@ -1166,6 +1179,15 @@ body {
   overflow-y: auto;
   max-height: 190px;
   padding-right: 8px;
+}
+
+.right-panel .song-card {
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+}
+
+.right-panel .song-card img {
+  width: 72px;
+  height: 50px;
 }
 
 /* Custom, separate scrollbars */
