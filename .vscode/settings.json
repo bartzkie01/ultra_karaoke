@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"d:\\\\Websites Project\\\\IDS Karaoke\"; npm install$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "ids-r06-karaoke",
+  "version": "1.0.0",
+  "description": "IDS R06 Karaoke web app with rooms, chat, playlist and YouTube karaoke playback.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.4",
+    "qrcode": "^1.5.1",
+    "socket.io": "^4.7.2"
+  }
+}

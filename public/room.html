@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IDS R06 Karaoke Room</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="room-shell">
+    <div class="room-topbar glass-panel">
+      <div class="room-title">ULTRA KARAOKE</div>
+    </div>
+
+    <div class="room-grid">
+      <aside class="panel left-panel glass-panel" id="leftPanel">
+        <div class="panel-header">
+          <h2>Song Search</h2>
+        </div>
+        <div class="search-box search-row">
+          <input id="searchInput" placeholder="Search karaoke songs" type="search" autocomplete="off" />
+          <button id="searchButton" class="btn btn-primary small">Search</button>
+        </div>
+        <div class="add-select-banner">Add / Select Song — queue the next karaoke spotlight with a glow.</div>
+        <div class="section-label">Search Results</div>
+        <div id="searchResults" class="item-list search-results"></div>
+        <div class="section-label">Most Viral Karaoke</div>
+        <div class="section-toolbar">
+          <button id="refreshViralBtn" class="btn btn-secondary small">Refresh</button>
+          <button id="loadMoreViralBtn" class="btn btn-secondary small">More</button>
+        </div>
+        <div id="viralList" class="item-list"></div>
+        <div class="section-label">Old Karaoke Hits</div>
+        <div id="oldSongsList" class="item-list"></div>
+        <div class="section-label">Duet Karaoke</div>
+        <div id="duetSongsList" class="item-list"></div>
+        <div class="section-label">Reserved Playlist</div>
+        <div id="playlist" class="playlist"></div>
+      </aside>
+
+      <main class="panel center-panel glass-panel">
+        <div class="center-header">
+          <div class="current-info">
+            <div id="currentTitle" class="current-title">Waiting for host to start</div>
+          </div>
+          <div class="center-buttons">
+            <button id="fullscreenBtn" class="btn btn-secondary small">Fullscreen</button>
+            <button id="nextBtn" class="btn btn-secondary small">Next</button>
+            <button id="stopBtn" class="btn btn-secondary small">Stop</button>
+          </div>
+        </div>
+        <div class="emoji-toolbar">
+          <button class="btn emoji-btn" data-emoji="😂">😂</button>
+          <button class="btn emoji-btn" data-emoji="💖">💖</button>
+          <button class="btn emoji-btn" data-emoji="🤟">🤟</button>
+          <button class="btn emoji-btn" data-emoji="😘">😘</button>
+          <button class="btn emoji-btn" data-emoji="🎉">🎉</button>
+        </div>
+        <div id="banner" class="top-banner">Now playing</div>
+        <div class="video-shell">
+          <div id="videoFrame" class="video-frame"></div>
+          <div class="video-overlay"></div>
+        </div>
+        <div class="video-footer">
+          <div class="score-description">Live score appears after each karaoke video starts.</div>
+        </div>
+      </main>
+
+      <aside class="panel right-panel glass-panel" id="rightPanel">
+        <div class="panel-header">
+          <h2>Chat Room</h2>
+        </div>
+        <div class="share-card">
+          <div class="share-row">
+            <input id="roomLinkInput" readonly />
+            <button id="shareLinkBtn" class="btn btn-primary">Copy</button>
+          </div>
+          <div class="qr-block">
+            <img id="qrCode" alt="QR Code" />
+          </div>
+        </div>
+        <div class="chat-list" id="chatList"></div>
+        <div class="chat-input-row">
+          <input id="chatInput" placeholder="Type a message" />
+          <button id="sendChat" class="btn btn-primary">Send</button>
+        </div>
+        <div class="users-card">
+          <div class="section-label">Participants</div>
+          <div id="userList" class="user-list"></div>
+        </div>
+      </aside>
+    </div>
+
+    <footer class="page-footer"><strong>Developed by: Rotbart Bolencis</strong></footer>
+  </div>
+
+  <div id="nameModal" class="modal-backdrop">
+    <div class="modal-panel glass-panel">
+      <h2>Enter your name</h2>
+      <input id="nameInput" placeholder="Your name" />
+      <button id="joinBtn" class="btn btn-primary">Join Room</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

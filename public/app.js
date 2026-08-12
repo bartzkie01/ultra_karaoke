@@ -1,0 +1,637 @@
+const socket = io();
+const roomId = window.location.pathname.split('/').pop();
+const nameModal = document.getElementById('nameModal');
+const nameInput = document.getElementById('nameInput');
+const joinBtn = document.getElementById('joinBtn');
+const currentTitle = document.getElementById('currentTitle');
+const playlistEl = document.getElementById('playlist');
+const viralList = document.getElementById('viralList');
+const searchInput = document.getElementById('searchInput');
+const searchButton = document.getElementById('searchButton');
+const suggestionsEl = document.getElementById('searchSuggestions');
+const banner = document.getElementById('banner');
+const videoFrame = document.getElementById('videoFrame');
+const qrCode = document.getElementById('qrCode');
+const shareLinkBtn = document.getElementById('shareLinkBtn');
+const userListEl = document.getElementById('userList');
+const chatList = document.getElementById('chatList');
+const chatInput = document.getElementById('chatInput');
+const sendChat = document.getElementById('sendChat');
+const nextBtn = document.getElementById('nextBtn');
+const stopBtn = document.getElementById('stopBtn');
+const fullscreenBtn = document.getElementById('fullscreenBtn');
+const emojiButtons = document.querySelectorAll('.emoji-btn');
+const videoOverlay = document.querySelector('.video-overlay');
+
+let userName = localStorage.getItem('idsR06Name') || '';
+let ytPlayer = null;
+let youtubeReady = false;
+let pendingVideoId = null;
+let scoreDismissTimer = null;
+let userIsHost = false;
+let currentRoom = null;
+let currentSong = null;
+
+let viralSongs = [];
+let oldSongs = [];
+let duetSongs = [];
+let searchResults = [];
+let currentPlaylist = [];
+let viralLimit = 8;
+let oldLimit = 6;
+let duetLimit = 6;
+
+function setShareLink() {
+  const shareUrl = `${window.location.origin}/room/${roomId}`;
+  qrCode.src = `/qr/${roomId}`;
+  const linkInput = document.getElementById('roomLinkInput');
+  if (linkInput) {
+    linkInput.value = shareUrl;
+  }
+  shareLinkBtn.textContent = 'Copy';
+  shareLinkBtn.onclick = async () => {
+    await navigator.clipboard.writeText(shareUrl).catch(() => null);
+    shareLinkBtn.textContent = 'Copied!';
+    setTimeout(() => {
+      shareLinkBtn.textContent = 'Copy';
+    }, 1600);
+  };
+}
+
+function showModal() {
+  nameModal.style.display = 'flex';
+  nameInput.focus();
+}
+
+function hideModal() {
+  nameModal.style.display = 'none';
+}
+
+function safeText(text) {
+  const span = document.createElement('span');
+  span.textContent = text;
+  return span.innerHTML;
+}
+
+function setHostControls() {
+  nextBtn.style.display = userIsHost ? '' : 'none';
+  stopBtn.style.display = userIsHost ? '' : 'none';
+  fullscreenBtn.style.display = userIsHost ? '' : 'none';
+  nextBtn.title = userIsHost ? 'Host only control' : 'Participants cannot skip';
+  stopBtn.title = userIsHost ? 'Host only control' : 'Participants cannot stop';
+}
+
+function renderPlaylist(playlist) {
+  currentPlaylist = playlist || [];
+  playlistEl.innerHTML = '';
+  if (!playlist.length) {
+    playlistEl.innerHTML = '<div class="song-card"><div class="song-copy"><strong>No reserved songs yet</strong><span>Search for karaoke videos to add.</span></div></div>';
+    return;
+  }
+  playlist.forEach((item) => {
+    const card = document.createElement('div');
+    card.className = 'song-card';
+    const canRemove = userIsHost || item.addedBy === userName;
+    const singerLabel = item.singer ? `<span class="playlist-singer">Singer: ${safeText(item.singer)}</span>` : '';
+    card.innerHTML = `
+      <div class="song-copy">
+        <strong>${safeText(item.title)}</strong>
+        <span>requested by ${safeText(item.addedBy || 'Guest')}</span>
+        ${singerLabel}
+      </div>
+      <div class="song-card-meta"></div>
+    `;
+    const meta = card.querySelector('.song-card-meta');
+    if (userIsHost) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'btn btn-secondary small';
+      editBtn.textContent = 'Edit Singer';
+      editBtn.addEventListener('click', () => {
+        const newSinger = prompt('Edit singer name', item.singer || item.addedBy || '');
+        if (newSinger !== null) {
+          socket.emit('edit-singer', { roomId, songId: item.id, singer: newSinger.trim() });
+        }
+      });
+      meta.appendChild(editBtn);
+    }
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-secondary small';
+    removeBtn.textContent = canRemove ? 'Remove' : 'Added';
+    removeBtn.disabled = !canRemove;
+    removeBtn.addEventListener('click', () => {
+      if (canRemove) {
+        socket.emit('remove-song', { roomId, songId: item.id });
+      }
+    });
+    meta.appendChild(removeBtn);
+    playlistEl.appendChild(card);
+  });
+}
+
+function renderUsers(users) {
+  userListEl.innerHTML = '';
+  users.forEach((user) => {
+    const chip = document.createElement('div');
+    chip.className = 'user-chip';
+    chip.innerHTML = `<strong>${safeText(user.name)}</strong><span>${user.isHost ? 'Host' : 'Participant'}</span>`;
+    userListEl.appendChild(chip);
+  });
+}
+
+function isSongAdded(videoId) {
+  return currentPlaylist.some((item) => item.videoId === videoId);
+}
+
+function makeSongCard(song, options = {}) {
+  const isAdded = isSongAdded(song.videoId);
+  const card = document.createElement('div');
+  card.className = 'song-card';
+  const singerInput = options.allowSinger ? `<input class="singer-name-input" placeholder="Singer name (optional)" value="${safeText(userName)}" />` : '';
+  const actionButton = isAdded ? `<span class="added-label">Added</span>` : `<button class="btn btn-secondary small">Add</button>`;
+  card.innerHTML = `
+    <img src="${safeText(song.thumbnail)}" alt="${safeText(song.title)}" />
+    <div class="song-copy">
+      <strong>${safeText(song.title)}</strong>
+      <span>Youtube karaoke</span>
+    </div>
+    ${singerInput}
+    <div class="song-card-meta">${actionButton}</div>
+  `;
+  if (!isAdded) {
+    const button = card.querySelector('button');
+    button.addEventListener('click', () => {
+      const singer = options.allowSinger ? card.querySelector('.singer-name-input').value.trim() || userName : userName;
+      addSong({ ...song, singer });
+    });
+  }
+  return card;
+}
+
+function renderSearchResults(results) {
+  const searchResultsEl = document.getElementById('searchResults');
+  searchResultsEl.innerHTML = '';
+  if (!results.length) {
+    searchResultsEl.innerHTML = '<div class="song-card"><strong>No search results found.</strong></div>';
+    return;
+  }
+  results.forEach((song) => {
+    searchResultsEl.appendChild(makeSongCard(song, { allowSinger: true }));
+  });
+}
+
+function renderViralSongs() {
+  const viralContainer = document.getElementById('viralList');
+  viralContainer.innerHTML = '';
+  if (!viralSongs.length) {
+    viralContainer.innerHTML = '<div class="song-card"><strong>Loading viral karaoke...</strong></div>';
+    return;
+  }
+  viralSongs.forEach((song) => {
+    viralContainer.appendChild(makeSongCard(song));
+  });
+}
+
+function renderOldSongs() {
+  const oldContainer = document.getElementById('oldSongsList');
+  oldContainer.innerHTML = '';
+  if (!oldSongs.length) {
+    oldContainer.innerHTML = '<div class="song-card"><strong>Loading old karaoke hits...</strong></div>';
+    return;
+  }
+  oldSongs.forEach((song) => {
+    oldContainer.appendChild(makeSongCard(song));
+  });
+}
+
+function renderDuetSongs() {
+  const duetContainer = document.getElementById('duetSongsList');
+  duetContainer.innerHTML = '';
+  if (!duetSongs.length) {
+    duetContainer.innerHTML = '<div class="song-card"><strong>Loading duet karaoke...</strong></div>';
+    return;
+  }
+  duetSongs.forEach((song) => {
+    duetContainer.appendChild(makeSongCard(song));
+  });
+}
+
+function renderChat(chat) {
+  chatList.innerHTML = '';
+  chat.slice(-40).forEach((item) => {
+    const bubble = document.createElement('div');
+    bubble.className = 'chat-bubble';
+    bubble.innerHTML = `<strong>${safeText(item.name)}</strong><span>${safeText(item.message)}</span>`;
+    chatList.appendChild(bubble);
+  });
+  chatList.scrollTop = chatList.scrollHeight;
+}
+
+function updateCurrent(current) {
+  if (scoreDismissTimer) {
+    clearTimeout(scoreDismissTimer);
+    scoreDismissTimer = null;
+  }
+
+  currentSong = current;
+  if (!current) {
+    currentTitle.textContent = 'Waiting for host to start';
+    videoFrame.innerHTML = '<div class="video-placeholder">Host will start the karaoke video soon.</div>';
+    return;
+  }
+  currentTitle.textContent = current.title;
+
+  const emojis = getScoreEmojis(current.score);
+  videoFrame.innerHTML = `
+    <div class="score-panel" id="scorePanel">
+      <h3>Stage applause!</h3>
+      <div class="score-value">${current.score}</div>
+      <p class="score-comment">${getScoreComment(current.score)}</p>
+      <div class="score-emojis">${emojis.map((emoji) => `<span>${safeText(emoji)}</span>`).join('')}</div>
+    </div>
+    <div id="playerContainer"></div>
+  `;
+
+  const scorePanel = document.getElementById('scorePanel');
+  if (scorePanel) {
+    scorePanel.classList.remove('visible');
+    scorePanel.style.opacity = '0';
+  }
+
+  pendingVideoId = current.videoId;
+  if (youtubeReady && userIsHost) {
+    loadKaraokeVideo(current.videoId);
+  } else if (!userIsHost) {
+    const placeholder = document.getElementById('playerContainer');
+    if (placeholder) {
+      placeholder.innerHTML = '<div class="video-placeholder">Host controls the karaoke stage. Add songs or cheer with emojis.</div>';
+    }
+  }
+  showBanner();
+}
+
+function getScoreComment(score) {
+  if (score >= 95) return 'Legendary performance — the crowd is cheering!';
+  if (score >= 90) return 'Amazing delivery — you nailed every note.';
+  if (score >= 85) return 'Fantastic stage presence and vocal energy.';
+  if (score >= 80) return 'Great job — your karaoke shines!';
+  return 'Sweet voice — you brought the song to life.';
+}
+
+function getScoreEmojis(score) {
+  if (score >= 95) return ['🎤', '✨', '🔥'];
+  if (score >= 90) return ['🎉', '💖', '🌟'];
+  if (score >= 85) return ['👏', '🎶', '😊'];
+  if (score >= 80) return ['👍', '🎵', '💫'];
+  return ['💖', '🎤', '🌈'];
+}
+
+function createOrUpdatePlayer(videoId) {
+  if (ytPlayer && ytPlayer.loadVideoById) {
+    ytPlayer.loadVideoById({ videoId, startSeconds: 0, suggestedQuality: 'large', autoplay: 1 });
+    return;
+  }
+  ytPlayer = new YT.Player('playerContainer', {
+    height: '100%',
+    width: '100%',
+    videoId,
+    playerVars: {
+      autoplay: 1,
+      controls: 0,
+      disablekb: 1,
+      modestbranding: 1,
+      rel: 0,
+      playsinline: 1,
+      mute: 1
+    },
+    events: {
+      onReady: onPlayerReady,
+      onStateChange: onPlayerStateChange
+    }
+  });
+}
+
+function loadKaraokeVideo(videoId) {
+  if (!window.YT || !youtubeReady) {
+    pendingVideoId = videoId;
+    return;
+  }
+  createOrUpdatePlayer(videoId);
+}
+
+function onPlayerReady(event) {
+  event.target.mute();
+  event.target.playVideo();
+  try {
+    event.target.setVolume(100);
+    event.target.unMute();
+  } catch (err) {
+    // autoplay policy may prevent unmute; keep the video playing muted instead.
+  }
+  if (pendingVideoId) {
+    pendingVideoId = null;
+  }
+}
+
+function showScoreOverlay() {
+  const scorePanel = document.getElementById('scorePanel');
+  if (!scorePanel) return;
+  scorePanel.classList.add('visible');
+  scorePanel.style.opacity = '1';
+  triggerScoreBurst();
+}
+
+function hideScoreOverlay() {
+  const scorePanel = document.getElementById('scorePanel');
+  if (!scorePanel) return;
+  scorePanel.classList.remove('visible');
+  scorePanel.style.opacity = '0';
+}
+
+function triggerScoreBurst() {
+  const scorePanel = document.getElementById('scorePanel');
+  if (!scorePanel) return;
+  for (const emo of scorePanel.querySelectorAll('.score-emojis span')) {
+    const burst = document.createElement('span');
+    burst.textContent = emo.textContent;
+    burst.style.position = 'absolute';
+    burst.style.left = `${50 + (Math.random() * 24 - 12)}%`;
+    burst.style.top = '50%';
+    burst.style.fontSize = `${18 + Math.random() * 14}px`;
+    burst.style.opacity = '1';
+    burst.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    burst.style.transition = 'transform 1.4s ease-out, opacity 1.4s ease-out';
+    scorePanel.appendChild(burst);
+    requestAnimationFrame(() => {
+      burst.style.transform = `translate(-50%, -180%) scale(1.2)`;
+      burst.style.opacity = '0';
+    });
+    setTimeout(() => burst.remove(), 1400);
+  }
+}
+
+function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.ENDED) {
+    showScoreOverlay();
+    if (scoreDismissTimer) {
+      clearTimeout(scoreDismissTimer);
+    }
+    scoreDismissTimer = setTimeout(() => {
+      hideScoreOverlay();
+      if (userIsHost && currentRoom?.playlist?.length) {
+        socket.emit('next-song', { roomId });
+      }
+    }, 3200);
+  }
+}
+
+window.onYouTubeIframeAPIReady = () => {
+  youtubeReady = true;
+  if (pendingVideoId) {
+    loadKaraokeVideo(pendingVideoId);
+  }
+};
+
+function showBanner() {
+  const title = currentSong?.title || '';
+  const singer = currentSong?.singer ? ` Singer: ${currentSong.singer}` : '';
+  banner.textContent = `Now Playing: ${title}${singer}`;
+  banner.classList.add('visible');
+  setTimeout(() => banner.classList.remove('visible'), 4000);
+}
+
+function updateParticipantView() {
+  const mainPanel = document.querySelector('main');
+  if (!mainPanel) return;
+  if (!userIsHost) {
+    mainPanel.classList.add('participant-view');
+  } else {
+    mainPanel.classList.remove('participant-view');
+  }
+}
+
+function clearScorePanelAfterDelay() {
+  setTimeout(() => {
+    const scorePanel = document.getElementById('scorePanel');
+    if (scorePanel) {
+      scorePanel.classList.remove('visible');
+      scorePanel.style.transition = 'opacity 0.8s ease';
+      scorePanel.style.opacity = '0';
+    }
+  }, 3200);
+}
+
+function addSong(song) {
+  socket.emit('add-song', {
+    roomId,
+    song: {
+      videoId: song.videoId,
+      title: song.title,
+      addedBy: userName,
+      singer: song.singer || userName
+    }
+  });
+}
+
+async function fetchSearch(query) {
+  if (!query) {
+    await fetchViralSongs();
+    return;
+  }
+  const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+  if (!response.ok) {
+    await fetchViralSongs();
+    return;
+  }
+  const results = await response.json();
+  suggestionsEl.innerHTML = '';
+  renderSearchResults(results);
+}
+
+async function fetchViralSongs() {
+  viralSongs = [];
+  renderViralSongs();
+  const response = await fetch(`/api/viral?limit=${viralLimit}`);
+  if (!response.ok) {
+    viralList.innerHTML = '<div class="song-card"><strong>Unable to load viral karaoke.</strong></div>';
+    return;
+  }
+  viralSongs = await response.json();
+  renderViralSongs();
+}
+
+async function fetchOldSongs() {
+  oldSongs = [];
+  renderOldSongs();
+  const response = await fetch(`/api/old-songs?limit=${oldLimit}`);
+  if (!response.ok) {
+    oldSongs = [];
+    renderOldSongs();
+    return;
+  }
+  oldSongs = await response.json();
+  renderOldSongs();
+}
+
+async function fetchDuetSongs() {
+  duetSongs = [];
+  renderDuetSongs();
+  const response = await fetch(`/api/duet-songs?limit=${duetLimit}`);
+  if (!response.ok) {
+    duetSongs = [];
+    renderDuetSongs();
+    return;
+  }
+  duetSongs = await response.json();
+  renderDuetSongs();
+}
+
+function triggerEmojiEffect(emoji) {
+  const container = document.createElement('div');
+  container.style.position = 'absolute';
+  container.style.inset = '0';
+  container.style.pointerEvents = 'none';
+  container.style.overflow = 'hidden';
+  videoFrame.appendChild(container);
+  const count = 20;
+  for (let i = 0; i < count; i += 1) {
+    const drop = document.createElement('div');
+    drop.textContent = emoji;
+    drop.style.position = 'absolute';
+    drop.style.left = `${20 + Math.random() * 60}%`;
+    drop.style.top = `${80 + Math.random() * 20}%`;
+    drop.style.fontSize = `${20 + Math.random() * 18}px`;
+    drop.style.opacity = '0.95';
+    drop.style.transform = `translateY(0px) rotate(${Math.random() * 90 - 45}deg)`;
+    drop.style.transition = `transform 2.2s ease-out, opacity 1.2s ease-out`;
+    container.appendChild(drop);
+    requestAnimationFrame(() => {
+      drop.style.transform = `translateY(-${120 + Math.random() * 80}px) rotate(${Math.random() * 140 - 70}deg)`;
+      drop.style.opacity = '0';
+    });
+  }
+  setTimeout(() => container.remove(), 2500);
+}
+
+function setupListeners() {
+  shareLinkBtn.addEventListener('click', setShareLink);
+  sendChat.addEventListener('click', () => {
+    const message = chatInput.value.trim();
+    if (!message) return;
+    socket.emit('send-chat', { roomId, message });
+    chatInput.value = '';
+  });
+  chatInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') sendChat.click();
+  });
+  nextBtn.addEventListener('click', () => socket.emit('next-song', { roomId }));
+  stopBtn.addEventListener('click', () => socket.emit('stop-play', { roomId }));
+  fullscreenBtn.addEventListener('click', async () => {
+    const target = videoFrame;
+    if (target.requestFullscreen) {
+      await target.requestFullscreen();
+    }
+  });
+  emojiButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const emoji = button.dataset.emoji;
+      socket.emit('trigger-emoji', { roomId, emoji });
+    });
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  });
+  searchButton.addEventListener('click', () => {
+    const query = searchInput.value.trim();
+    if (!query) return;
+    fetchSearch(query);
+  });
+  searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      searchButton.click();
+    }
+  });
+  searchInput.addEventListener('input', async () => {
+    const query = searchInput.value.trim();
+    if (!query) {
+      suggestionsEl.innerHTML = '';
+      return;
+    }
+    const response = await fetch(`/api/suggestions?q=${encodeURIComponent(query)}`);
+    if (!response.ok) return;
+    const suggestions = await response.json();
+    suggestionsEl.innerHTML = '';
+    suggestions.slice(0, 6).forEach((text) => {
+      const item = document.createElement('div');
+      item.className = 'search-suggestion';
+      item.innerHTML = `<span>${safeText(text)}</span>`;
+      item.addEventListener('click', () => {
+        searchInput.value = text;
+        searchButton.click();
+      });
+      suggestionsEl.appendChild(item);
+    });
+  });
+  const refreshViralBtn = document.getElementById('refreshViralBtn');
+  const loadMoreViralBtn = document.getElementById('loadMoreViralBtn');
+  refreshViralBtn?.addEventListener('click', async () => {
+    await fetchViralSongs();
+  });
+  loadMoreViralBtn?.addEventListener('click', async () => {
+    viralLimit = Math.min(20, viralLimit + 4);
+    await fetchViralSongs();
+  });
+}
+
+joinBtn.addEventListener('click', () => {
+  const name = nameInput.value.trim();
+  if (!name) return;
+  userName = name;
+  localStorage.setItem('idsR06Name', userName);
+  hideModal();
+  socket.emit('join-room', { roomId, name: userName });
+});
+
+socket.on('connect', () => {
+  if (userName) {
+    hideModal();
+    socket.emit('join-room', { roomId, name: userName });
+  } else {
+    showModal();
+  }
+});
+
+socket.on('room-error', (message) => {
+  alert(message);
+  window.location.href = '/';
+});
+
+socket.on('room-state', (state) => {
+  currentRoom = state;
+  userIsHost = state.hostId === socket.id;
+  setHostControls();
+  updateParticipantView();
+  renderPlaylist(state.playlist);
+  renderUsers(state.users);
+  renderChat(state.chat);
+  updateCurrent(state.current);
+});
+
+socket.on('playlist-updated', (playlist) => renderPlaylist(playlist));
+socket.on('chat-update', (chat) => renderChat(chat));
+
+socket.on('emoji-rain', (emoji) => triggerEmojiEffect(emoji));
+
+socket.on('user-list', (users) => renderUsers(users));
+
+socket.on('connect_error', () => {
+  console.warn('Unable to connect to room server');
+});
+
+setShareLink();
+fetchViralSongs();
+fetchOldSongs();
+fetchDuetSongs();
+setupListeners();

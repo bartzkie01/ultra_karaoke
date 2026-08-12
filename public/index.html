@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IDS R06 Karaoke</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-shell home-shell glass-panel">
+    <div class="hero-card">
+      <h1>IDS R06 Karaoke</h1>
+      <p>Private karaoke rooms with reserved playlist, chat, QR share, and YouTube karaoke playback.</p>
+      <div class="home-buttons">
+        <button id="createRoom" class="btn btn-primary">Create Room</button>
+        <button id="joinRoom" class="btn btn-secondary">Join Room</button>
+      </div>
+      <div class="home-info">
+        <p>Host creates the room. Participants join by code or QR scan. The playback screen is host-controlled and ad-safe.</p>
+      </div>
+    </div>
+    <footer class="page-footer">developed by: rotbart</footer>
+  </div>
+  <script>
+    document.getElementById('createRoom').addEventListener('click', async () => {
+      const response = await fetch('/api/create-room', { method: 'POST' });
+      const data = await response.json();
+      if (data.url) window.location.href = data.url;
+    });
+
+    document.getElementById('joinRoom').addEventListener('click', () => {
+      const code = prompt('Enter room code or link');
+      if (!code) return;
+      const trimmed = code.trim();
+      const match = trimmed.match(/([A-Z0-9]{6})$/i);
+      const roomId = match ? match[1].toUpperCase() : trimmed.toUpperCase();
+      window.location.href = `/room/${roomId}`;
+    });
+  </script>
+</body>
+</html>
