@@ -68,10 +68,15 @@ function startNextSong(room) {
   room.bannerVisible = true;
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { maxAge: '1h' }));
 app.use(express.json());
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || '';
+const searchCache = new Map();
+const videoValidationCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000;
+const VALIDATION_CACHE_TTL = 15 * 60 * 1000;
+const NON_SONG_PATTERN = /\b(?:playlist|mix|compilation|medley|mashup|top\s*\d+|best\s+(?:karaoke|songs)|greatest\s+hits|\d+\s+(?:karaoke\s+)?songs|hours?\s+of|nonstop|tutorial|how\s+to|lesson|tips?|vlog|reaction|review|challenge|ranking|countdown)\b/i;
 
 async function fetchYouTubeApi(url) {
   const response = await fetch(url, {
@@ -88,11 +93,13 @@ async function fetchYouTubeApi(url) {
 
 function isKaraokeTitle(title) {
   const lower = title.toLowerCase();
-  return lower.includes('karaoke') || lower.includes('カラオケ') || lower.includes('karaoké');
+  return (lower.includes('karaoke') || lower.includes('カラオケ') || lower.includes('karaoké')) && !NON_SONG_PATTERN.test(title);
 }
 
-async function verifyYouTubeVideo(videoId) {
-  if (!videoId) return false;
+async function verifyYouTubeVideo(videoId, thumbnail) {
+  if (!videoId || !thumbnail) return null;
+  const cached = videoValidationCache.get(videoId);
+  if (cached && Date.now() - cached.createdAt < VALIDATION_CACHE_TTL) return cached.value;
   const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
   try {
     const response = await fetch(url, {
@@ -101,9 +108,19 @@ async function verifyYouTubeVideo(videoId) {
         Accept: 'application/json'
       }
     });
-    return response.ok;
+    if (!response.ok) return null;
+    const data = await response.json();
+    const thumbnailUrl = data.thumbnail_url || thumbnail;
+    const thumbnailResponse = await fetch(thumbnailUrl, {
+      method: 'HEAD',
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(5000)
+    });
+    const value = thumbnailResponse.ok ? { videoId, thumbnail: thumbnailUrl } : null;
+    videoValidationCache.set(videoId, { createdAt: Date.now(), value });
+    return value;
   } catch (err) {
-    return false;
+    return null;
   }
 }
 
@@ -116,18 +133,18 @@ function mapSearchItems(items) {
       return {
         videoId: item.id.videoId,
         title,
-        thumbnail: snippet.thumbnails?.high?.url || snippet.thumbnails?.default?.url || `https://i.ytimg.com/vi/${item.id.videoId}/hqdefault.jpg`
+        thumbnail: snippet.thumbnails?.high?.url || snippet.thumbnails?.medium?.url || snippet.thumbnails?.default?.url
       };
     })
-    .filter((item) => isKaraokeTitle(item.title));
+    .filter((item) => item.thumbnail && isKaraokeTitle(item.title));
 }
 
 async function verifySearchResults(items) {
-  const candidates = items.slice(0, 16);
+  const candidates = items.slice(0, 12);
   const results = await Promise.allSettled(
     candidates.map(async (item) => {
-      const valid = await verifyYouTubeVideo(item.videoId);
-      return valid ? item : null;
+      const valid = await verifyYouTubeVideo(item.videoId, item.thumbnail);
+      return valid ? { ...item, thumbnail: valid.thumbnail } : null;
     })
   );
   return results
@@ -247,10 +264,10 @@ function parseYouTubeResults(html) {
       return {
         videoId: video.videoId,
         title: title.trim(),
-        thumbnail: thumbnails[thumbnails.length - 1]?.url || `https://i.ytimg.com/vi/${video.videoId}/hqdefault.jpg`
+        thumbnail: thumbnails[thumbnails.length - 1]?.url
       };
     })
-    .filter((item) => isKaraokeTitle(item.title));
+    .filter((item) => item.thumbnail && isKaraokeTitle(item.title));
 
   return items;
 }
@@ -259,6 +276,12 @@ app.get('/api/search', async (req, res) => {
   const query = (req.query.q || '').trim();
   if (!query) {
     res.json([]);
+    return;
+  }
+  const cacheKey = query.toLowerCase();
+  const cached = searchCache.get(cacheKey);
+  if (cached && Date.now() - cached.createdAt < CACHE_TTL) {
+    res.json(cached.results);
     return;
   }
   const searchPhrase = `${query} karaoke`;
@@ -271,7 +294,9 @@ app.get('/api/search', async (req, res) => {
       const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
       results = sortByViewCount(results, stats).slice(0, 12);
       const verified = await verifySearchResults(results);
-      res.json(verified.slice(0, 10));
+      const resultPayload = verified.slice(0, 10);
+      searchCache.set(cacheKey, { createdAt: Date.now(), results: resultPayload });
+      res.json(resultPayload);
       return;
     }
   } catch (err) {
@@ -290,7 +315,9 @@ app.get('/api/search', async (req, res) => {
     const html = await response.text();
     const results = parseYouTubeResults(html);
     const verified = await verifySearchResults(results);
-    res.json(verified.slice(0, 8));
+    const resultPayload = verified.slice(0, 8);
+    searchCache.set(cacheKey, { createdAt: Date.now(), results: resultPayload });
+    res.json(resultPayload);
   } catch (err) {
     res.json([]);
   }

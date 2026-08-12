@@ -41,6 +41,9 @@ let currentPlaylist = [];
 let viralLimit = 8;
 let oldLimit = 6;
 let duetLimit = 6;
+let searchController = null;
+let suggestionsController = null;
+let suggestionTimer = null;
 
 function setShareLink() {
   const shareUrl = `${window.location.origin}/room/${roomId}`;
@@ -164,7 +167,7 @@ function makeSongCard(song, options = {}) {
   const singerInput = options.allowSinger ? `<input class="singer-name-input" placeholder="Singer name (optional)" value="${safeText(userName)}" />` : '';
   const actionButton = isAdded ? `<span class="added-label">Added</span>` : (isPending ? `<span class="added-label">Reserving...</span>` : `<button class="btn btn-secondary small">Add</button>`);
   card.innerHTML = `
-    <img src="${safeText(song.thumbnail)}" alt="${safeText(song.title)}" />
+    <img src="${safeText(song.thumbnail)}" alt="${safeText(song.title)}" loading="lazy" decoding="async" />
     <div class="song-copy">
       <strong>${safeText(song.title)}</strong>
       <span>Youtube karaoke</span>
@@ -323,6 +326,8 @@ function updateCurrent(current) {
   pendingVideoId = current.videoId;
   if (youtubeReady && userIsHost) {
     loadKaraokeVideo(current.videoId);
+  } else if (userIsHost) {
+    ensureYouTubeApi();
   } else if (!userIsHost) {
     const placeholder = document.getElementById('playerContainer');
     if (placeholder) {
@@ -330,6 +335,15 @@ function updateCurrent(current) {
     }
   }
   showBanner();
+}
+
+function ensureYouTubeApi() {
+  if (youtubeReady || document.getElementById('youtubeIframeApi')) return;
+  const script = document.createElement('script');
+  script.id = 'youtubeIframeApi';
+  script.src = 'https://www.youtube.com/iframe_api';
+  script.async = true;
+  document.head.appendChild(script);
 }
 
 function getScoreComment(score) {
@@ -505,8 +519,11 @@ async function fetchSearch(query) {
   const searchResultsEl = document.getElementById('searchResults');
   if (searchResultsEl) searchResultsEl.innerHTML = '<div class="song-card"><strong>Searching…</strong></div>';
   if (searchButton) searchButton.disabled = true;
+  if (searchController) searchController.abort();
+  const controller = new AbortController();
+  searchController = controller;
   try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal });
     if (!response.ok) {
       if (searchButton) searchButton.disabled = false;
       await fetchViralSongs();
@@ -516,10 +533,11 @@ async function fetchSearch(query) {
     suggestionsEl.innerHTML = '';
     renderSearchResults(results);
   } catch (err) {
+    if (err.name === 'AbortError') return;
     console.warn('Search failed', err);
     await fetchViralSongs();
   } finally {
-    if (searchButton) searchButton.disabled = false;
+    if (searchController === controller && searchButton) searchButton.disabled = false;
   }
 }
 
@@ -636,26 +654,36 @@ function setupListeners() {
       searchButton.click();
     }
   });
-  searchInput.addEventListener('input', async () => {
+  searchInput.addEventListener('input', () => {
     const query = searchInput.value.trim();
+    clearTimeout(suggestionTimer);
+    if (suggestionsController) suggestionsController.abort();
     if (!query) {
       suggestionsEl.innerHTML = '';
       return;
     }
-    const response = await fetch(`/api/suggestions?q=${encodeURIComponent(query)}`);
-    if (!response.ok) return;
-    const suggestions = await response.json();
-    suggestionsEl.innerHTML = '';
-    suggestions.slice(0, 6).forEach((text) => {
-      const item = document.createElement('div');
-      item.className = 'search-suggestion';
-      item.innerHTML = `<span>${safeText(text)}</span>`;
-      item.addEventListener('click', () => {
-        searchInput.value = text;
-        searchButton.click();
-      });
-      suggestionsEl.appendChild(item);
-    });
+    suggestionTimer = setTimeout(async () => {
+      suggestionsController = new AbortController();
+      try {
+        const response = await fetch(`/api/suggestions?q=${encodeURIComponent(query)}`, { signal: suggestionsController.signal });
+        if (!response.ok) return;
+        const suggestions = await response.json();
+        if (searchInput.value.trim() !== query) return;
+        suggestionsEl.innerHTML = '';
+        suggestions.slice(0, 6).forEach((text) => {
+          const item = document.createElement('div');
+          item.className = 'search-suggestion';
+          item.innerHTML = `<span>${safeText(text)}</span>`;
+          item.addEventListener('click', () => {
+            searchInput.value = text;
+            searchButton.click();
+          });
+          suggestionsEl.appendChild(item);
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.warn('Suggestions failed', err);
+      }
+    }, 300);
   });
   const tabButtons = document.querySelectorAll('.tab-btn');
   tabButtons.forEach((button) => {
@@ -730,7 +758,4 @@ socket.on('connect_error', () => {
 });
 
 setShareLink();
-fetchViralSongs();
-fetchOldSongs();
-fetchDuetSongs();
 setupListeners();

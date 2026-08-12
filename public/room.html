@@ -22,6 +22,7 @@
           <input id="searchInput" placeholder="Search karaoke songs" type="search" autocomplete="off" />
           <button id="searchButton" class="btn btn-primary small">Search</button>
         </div>
+        <div id="searchSuggestions" class="search-suggestions"></div>
         <div class="tabs-bar">
           <button type="button" class="tab-btn active" data-tab="reserved">Reserved Playlist</button>
           <button type="button" class="tab-btn" data-tab="viral">Most Viral Karaoke</button>
@@ -116,7 +117,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="https://www.youtube.com/iframe_api"></script>
   <script src="/app.js"></script>
 </body>
 </html>
