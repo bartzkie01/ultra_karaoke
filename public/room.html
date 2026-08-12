@@ -10,6 +10,7 @@
   <div class="room-shell">
     <div class="room-topbar glass-panel">
       <div class="room-title">ULTRA KARAOKE</div>
+      <div class="room-branding">Private karaoke rooms • add songs • host controlled</div>
     </div>
 
     <div class="room-grid">
@@ -21,21 +22,33 @@
           <input id="searchInput" placeholder="Search karaoke songs" type="search" autocomplete="off" />
           <button id="searchButton" class="btn btn-primary small">Search</button>
         </div>
-        <div class="add-select-banner">Add / Select Song — queue the next karaoke spotlight with a glow.</div>
+        <div class="tabs-bar">
+          <button type="button" class="tab-btn active" data-tab="reserved">Reserved Playlist</button>
+          <button type="button" class="tab-btn" data-tab="viral">Most Viral Karaoke</button>
+          <button type="button" class="tab-btn" data-tab="duet">Duet Karaoke</button>
+        </div>
+        <div class="tab-panels">
+          <div id="reservedPanel" class="tab-panel">
+            <div class="section-label">Reserved Playlist</div>
+            <div id="playlist" class="playlist"></div>
+          </div>
+          <div id="viralPanel" class="tab-panel hide-panel">
+            <div class="section-label">Most Viral Karaoke</div>
+            <div class="section-toolbar">
+              <button id="refreshViralBtn" class="btn btn-secondary small">Refresh</button>
+              <button id="loadMoreViralBtn" class="btn btn-secondary small">More</button>
+            </div>
+            <div id="viralList" class="item-list"></div>
+            <div class="section-label">Old Karaoke Hits</div>
+            <div id="oldSongsList" class="item-list"></div>
+          </div>
+          <div id="duetPanel" class="tab-panel hide-panel">
+            <div class="section-label">Duet Karaoke</div>
+            <div id="duetSongsList" class="item-list"></div>
+          </div>
+        </div>
         <div class="section-label">Search Results</div>
         <div id="searchResults" class="item-list search-results"></div>
-        <div class="section-label">Most Viral Karaoke</div>
-        <div class="section-toolbar">
-          <button id="refreshViralBtn" class="btn btn-secondary small">Refresh</button>
-          <button id="loadMoreViralBtn" class="btn btn-secondary small">More</button>
-        </div>
-        <div id="viralList" class="item-list"></div>
-        <div class="section-label">Old Karaoke Hits</div>
-        <div id="oldSongsList" class="item-list"></div>
-        <div class="section-label">Duet Karaoke</div>
-        <div id="duetSongsList" class="item-list"></div>
-        <div class="section-label">Reserved Playlist</div>
-        <div id="playlist" class="playlist"></div>
       </aside>
 
       <main class="panel center-panel glass-panel">

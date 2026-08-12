@@ -485,6 +485,13 @@ async function fetchDuetSongs() {
   renderDuetSongs();
 }
 
+function setActiveTab(tabName) {
+  const tabs = document.querySelectorAll('.tab-btn');
+  const panels = document.querySelectorAll('.tab-panel');
+  tabs.forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
+  panels.forEach((panel) => panel.classList.toggle('hide-panel', panel.id !== `${tabName}Panel`));
+}
+
 function triggerEmojiEffect(emoji) {
   const container = document.createElement('div');
   container.style.position = 'absolute';
@@ -574,6 +581,11 @@ function setupListeners() {
       suggestionsEl.appendChild(item);
     });
   });
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  tabButtons.forEach((button) => {
+    button.addEventListener('click', () => setActiveTab(button.dataset.tab));
+  });
+  setActiveTab('reserved');
   const refreshViralBtn = document.getElementById('refreshViralBtn');
   const loadMoreViralBtn = document.getElementById('loadMoreViralBtn');
   refreshViralBtn?.addEventListener('click', async () => {

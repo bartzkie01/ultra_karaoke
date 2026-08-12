@@ -91,6 +91,22 @@ function isKaraokeTitle(title) {
   return lower.includes('karaoke') || lower.includes('カラオケ') || lower.includes('karaoké');
 }
 
+async function verifyYouTubeVideo(videoId) {
+  if (!videoId) return false;
+  const url = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+        Accept: 'application/json'
+      }
+    });
+    return response.ok;
+  } catch (err) {
+    return false;
+  }
+}
+
 function mapSearchItems(items) {
   return items
     .filter((item) => item.id?.videoId)
@@ -104,6 +120,36 @@ function mapSearchItems(items) {
       };
     })
     .filter((item) => isKaraokeTitle(item.title));
+}
+
+async function verifySearchResults(items) {
+  const candidates = items.slice(0, 16);
+  const results = await Promise.allSettled(
+    candidates.map(async (item) => {
+      const valid = await verifyYouTubeVideo(item.videoId);
+      return valid ? item : null;
+    })
+  );
+  return results
+    .filter((result) => result.status === 'fulfilled' && result.value)
+    .map((result) => result.value);
+}
+
+async function fetchYouTubeViews(videoIds) {
+  if (!YOUTUBE_API_KEY || !videoIds.length) return {};
+  const idList = encodeURIComponent(videoIds.join(','));
+  const url = `https://www.googleapis.com/youtube/v3/videos?part=statistics&id=${idList}&key=${YOUTUBE_API_KEY}`;
+  const data = await fetchYouTubeApi(url);
+  return (data.items || []).reduce((map, item) => {
+    if (item.id && item.statistics?.viewCount) {
+      map[item.id] = Number(item.statistics.viewCount);
+    }
+    return map;
+  }, {});
+}
+
+function sortByViewCount(items, statsMap) {
+  return items.slice().sort((a, b) => (statsMap[b.videoId] || 0) - (statsMap[a.videoId] || 0));
 }
 
 app.post('/api/create-room', (req, res) => {
@@ -219,10 +265,13 @@ app.get('/api/search', async (req, res) => {
   try {
     if (YOUTUBE_API_KEY) {
       const encoded = encodeURIComponent(searchPhrase);
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=12&key=${YOUTUBE_API_KEY}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=16&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
-      const results = mapSearchItems(apiData.items || []);
-      res.json(results);
+      let results = mapSearchItems(apiData.items || []);
+      const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
+      results = sortByViewCount(results, stats).slice(0, 12);
+      const verified = await verifySearchResults(results);
+      res.json(verified.slice(0, 10));
       return;
     }
   } catch (err) {
@@ -240,7 +289,8 @@ app.get('/api/search', async (req, res) => {
     });
     const html = await response.text();
     const results = parseYouTubeResults(html);
-    res.json(results.slice(0, 8));
+    const verified = await verifySearchResults(results);
+    res.json(verified.slice(0, 8));
   } catch (err) {
     res.json([]);
   }
@@ -251,10 +301,13 @@ app.get('/api/viral', async (req, res) => {
   try {
     if (YOUTUBE_API_KEY) {
       const query = encodeURIComponent('karaoke popular hits');
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${query}&maxResults=${limit}&order=viewCount&key=${YOUTUBE_API_KEY}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${query}&maxResults=${Math.min(limit, 16)}&order=viewCount&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
-      const results = mapSearchItems(apiData.items || []);
-      res.json(results);
+      let results = mapSearchItems(apiData.items || []);
+      const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
+      results = sortByViewCount(results, stats).slice(0, limit);
+      const verified = await verifySearchResults(results);
+      res.json(verified.slice(0, limit));
       return;
     }
   } catch (err) {
@@ -273,7 +326,8 @@ app.get('/api/viral', async (req, res) => {
     });
     const html = await response.text();
     const results = parseYouTubeResults(html);
-    res.json(results.slice(0, limit));
+    const verified = await verifySearchResults(results);
+    res.json(verified.slice(0, limit));
   } catch (err) {
     res.json([]);
   }
