@@ -189,7 +189,7 @@ function mapSearchItems(items) {
 }
 
 async function verifySearchResults(items, limit = 8) {
-  const candidates = items.slice(0, Math.min(24, Math.max(12, limit * 2)));
+  const candidates = items.slice(0, Math.min(50, Math.max(16, limit * 2)));
   const results = await Promise.allSettled(
     candidates.map(async (item) => {
       const valid = await verifyYouTubeVideo(item.videoId, item.thumbnail);
@@ -324,7 +324,7 @@ function parseYouTubeResults(html) {
 
 app.get('/api/search', async (req, res) => {
   const query = (req.query.q || '').trim();
-  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 8));
+  const limit = Math.min(30, Math.max(1, parseInt(req.query.limit, 10) || 12));
   if (!query) {
     res.json([]);
     return;
@@ -339,11 +339,11 @@ app.get('/api/search', async (req, res) => {
   try {
     if (YOUTUBE_API_KEY) {
       const encoded = encodeURIComponent(searchPhrase);
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=24&key=${YOUTUBE_API_KEY}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=50&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
       let results = mapSearchItems(apiData.items || []);
       const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
-      results = sortByViewCount(results, stats).slice(0, 24);
+      results = sortByViewCount(results, stats).slice(0, 50);
       const verified = await verifySearchResults(results, limit);
       const resultPayload = verified.slice(0, limit);
       searchCache.set(cacheKey, { createdAt: Date.now(), results: resultPayload });
@@ -375,7 +375,7 @@ app.get('/api/search', async (req, res) => {
 });
 
 app.get('/api/viral', async (req, res) => {
-  const limit = Math.min(20, parseInt(req.query.limit, 10) || 8);
+  const limit = Math.min(30, parseInt(req.query.limit, 10) || 12);
   const roomId = String(req.query.room || '');
   const viralQueries = [
     'karaoke popular hits',
@@ -387,7 +387,7 @@ app.get('/api/viral', async (req, res) => {
   try {
     if (YOUTUBE_API_KEY) {
       const query = encodeURIComponent(viralQueries[queryIndex]);
-      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${query}&maxResults=${Math.min(limit, 16)}&order=viewCount&key=${YOUTUBE_API_KEY}`;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${query}&maxResults=${Math.min(limit * 2, 50)}&order=viewCount&key=${YOUTUBE_API_KEY}`;
       const apiData = await fetchYouTubeApi(url);
       let results = mapSearchItems(apiData.items || []);
       const stats = await fetchYouTubeViews(results.map((item) => item.videoId));
@@ -462,12 +462,12 @@ async function verifiedSampleSongs(type, roomId, limit) {
 }
 
 app.get('/api/old-songs', async (req, res) => {
-  const limit = Math.min(12, parseInt(req.query.limit, 10) || 6);
+  const limit = Math.min(30, parseInt(req.query.limit, 10) || 12);
   res.json(await verifiedSampleSongs('old', String(req.query.room || ''), limit));
 });
 
 app.get('/api/duet-songs', async (req, res) => {
-  const limit = Math.min(12, parseInt(req.query.limit, 10) || 6);
+  const limit = Math.min(30, parseInt(req.query.limit, 10) || 12);
   const roomId = String(req.query.room || '');
   const refresh = Math.max(0, parseInt(req.query.refresh, 10) || 0);
   const duetQueries = ['duet karaoke', 'karaoke duet version', 'male female duet karaoke', 'duet karaoke lyrics'];

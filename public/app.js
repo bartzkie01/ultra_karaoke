@@ -38,11 +38,11 @@ let duetSongs = [];
 let searchResults = [];
 let pendingAdds = new Set();
 let currentPlaylist = [];
-let viralLimit = 8;
-let oldLimit = 6;
-let duetLimit = 4;
+let viralLimit = 12;
+let oldLimit = 12;
+let duetLimit = 12;
 let duetRefresh = 0;
-let searchLimit = 8;
+let searchLimit = 12;
 let activeSearchQuery = 'karaoke';
 let searchController = null;
 let suggestionsController = null;
@@ -407,7 +407,8 @@ function createOrUpdatePlayer(videoId) {
     events: {
       onReady: onPlayerReady,
       onStateChange: onPlayerStateChange,
-      onError: onPlayerError
+      onError: onPlayerError,
+      onApiChange: onPlayerApiChange
     }
   });
 }
@@ -421,6 +422,7 @@ function loadKaraokeVideo(videoId) {
 }
 
 function onPlayerReady(event) {
+  disableYouTubeCaptions(event.target);
   event.target.mute();
   event.target.playVideo();
   try {
@@ -432,6 +434,20 @@ function onPlayerReady(event) {
   if (pendingVideoId) {
     pendingVideoId = null;
   }
+}
+
+function disableYouTubeCaptions(player) {
+  try {
+    // Unload YouTube's optional captions module even when the viewer's
+    // YouTube preference would normally enable it.
+    player.unloadModule('captions');
+  } catch (err) {
+    // The captions module is not available for every video.
+  }
+}
+
+function onPlayerApiChange() {
+  disableYouTubeCaptions(ytPlayer);
 }
 
 function advanceToNextSong(delay = 0) {
@@ -485,6 +501,7 @@ function triggerScoreBurst() {
 }
 
 function onPlayerStateChange(event) {
+  if (event.data === YT.PlayerState.PLAYING) disableYouTubeCaptions(event.target);
   if (event.data === YT.PlayerState.ENDED) {
     showScoreOverlay();
     if (scoreDismissTimer) {
@@ -547,7 +564,7 @@ function addSong(song) {
   });
 }
 
-async function fetchSearch(query, limit = 8) {
+async function fetchSearch(query, limit = 12) {
   if (!query) {
     await fetchViralSongs();
     return;
@@ -689,7 +706,7 @@ function setupListeners() {
   searchButton.addEventListener('click', () => {
     const query = searchInput.value.trim();
     if (!query) return;
-    fetchSearch(query, 8);
+    fetchSearch(query, 12);
   });
   searchInput.addEventListener('keydown', (event) => {
     if (event.key === 'Enter') {
@@ -739,17 +756,17 @@ function setupListeners() {
   const loadMoreDuetBtn = document.getElementById('loadMoreDuetBtn');
   const refreshDuetBtn = document.getElementById('refreshDuetBtn');
   loadMoreSearchBtn?.addEventListener('click', () => {
-    fetchSearch(activeSearchQuery || 'karaoke', Math.min(20, searchLimit + 6));
+    fetchSearch(activeSearchQuery || 'karaoke', Math.min(30, searchLimit + 6));
   });
   refreshViralBtn?.addEventListener('click', async () => {
     await fetchViralSongs();
   });
   loadMoreViralBtn?.addEventListener('click', async () => {
-    viralLimit = Math.min(20, viralLimit + 4);
+    viralLimit = Math.min(30, viralLimit + 6);
     await fetchViralSongs();
   });
   loadMoreDuetBtn?.addEventListener('click', async () => {
-    duetLimit = Math.min(12, duetLimit + 3);
+    duetLimit = Math.min(30, duetLimit + 6);
     await fetchDuetSongs();
   });
   refreshDuetBtn?.addEventListener('click', async () => {
@@ -823,4 +840,4 @@ socket.on('connect_error', () => {
 
 setShareLink();
 setupListeners();
-fetchSearch('karaoke', 8);
+fetchSearch('karaoke', 12);
