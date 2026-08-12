@@ -161,13 +161,35 @@ function makeSongCard(song, options = {}) {
     const button = card.querySelector('button');
     button.addEventListener('click', () => {
       const singer = options.allowSinger ? card.querySelector('.singer-name-input').value.trim() || userName : userName;
+      // guard against race: check again and notify if already added
+      if (isSongAdded(song.videoId)) {
+        notify('This song is already in the reserved playlist');
+        const meta = card.querySelector('.song-card-meta');
+        if (meta) meta.innerHTML = '<span class="added-label">Added</span>';
+        return;
+      }
       addSong({ ...song, singer });
     });
   }
   return card;
 }
 
+function notify(text, timeout = 2200) {
+  let t = document.getElementById('toastNotify');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toastNotify';
+    t.className = 'toast-notify';
+    document.body.appendChild(t);
+  }
+  t.textContent = text;
+  t.classList.add('visible');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('visible'), timeout);
+}
+
 function renderSearchResults(results) {
+  searchResults = results || [];
   const searchResultsEl = document.getElementById('searchResults');
   searchResultsEl.innerHTML = '';
   if (!results.length) {
@@ -220,7 +242,36 @@ function renderChat(chat) {
   chat.slice(-40).forEach((item) => {
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-    bubble.innerHTML = `<strong>${safeText(item.name)}</strong><span>${safeText(item.message)}</span>`;
+    if (item.name === userName) bubble.classList.add('me');
+    const time = item.ts ? new Date(item.ts) : new Date();
+    const hh = time.getHours().toString().padStart(2, '0');
+    const mm = time.getMinutes().toString().padStart(2, '0');
+    const stamp = `${hh}:${mm}`;
+    const reactions = item.reactions || {};
+    const reactionHtml = Object.keys(reactions).length ?
+      `<div class="reactions">${Object.entries(reactions).map(([emo, users]) => `<span class="reaction-pill">${emo} ${users.length}</span>`).join('')}</div>` : '';
+    bubble.innerHTML = `
+      <div class="chat-head"><strong>${safeText(item.name)}</strong><span class="chat-time">${stamp}</span></div>
+      <div class="chat-msg">${safeText(item.message)}</div>
+      ${reactionHtml}
+      <div class="chat-reactors">
+        <button class="react-emoji">👍</button>
+        <button class="react-emoji">😂</button>
+        <button class="react-emoji">❤️</button>
+        <button class="react-emoji">🔥</button>
+      </div>
+    `;
+    // attach reaction handlers
+    bubble.querySelectorAll('.react-emoji').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const emo = btn.textContent.trim();
+        if (!item.id) {
+          notify('Unable to react to this message');
+          return;
+        }
+        socket.emit('react-message', { roomId, messageId: item.id, emoji: emo });
+      });
+    });
     chatList.appendChild(bubble);
   });
   chatList.scrollTop = chatList.scrollHeight;
@@ -631,7 +682,16 @@ socket.on('room-state', (state) => {
   updateCurrent(state.current);
 });
 
-socket.on('playlist-updated', (playlist) => renderPlaylist(playlist));
+socket.on('playlist-updated', (playlist) => {
+  renderPlaylist(playlist);
+  // refresh visible song lists so Add buttons reflect reserved state
+  try {
+    renderSearchResults(searchResults || []);
+  } catch (e) {}
+  renderViralSongs();
+  renderOldSongs();
+  renderDuetSongs();
+});
 socket.on('chat-update', (chat) => renderChat(chat));
 
 socket.on('emoji-rain', (emoji) => triggerEmojiEffect(emoji));
