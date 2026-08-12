@@ -50,6 +50,8 @@ let autoAdvancePending = false;
 
 function setShareLink() {
   const shareUrl = `${window.location.origin}/room/${roomId}`;
+  const roomCodeDisplay = document.getElementById('roomCodeDisplay');
+  if (roomCodeDisplay) roomCodeDisplay.textContent = roomId;
   qrCode.src = `/qr/${roomId}`;
   const linkInput = document.getElementById('roomLinkInput');
   if (linkInput) {
@@ -396,7 +398,10 @@ function createOrUpdatePlayer(videoId) {
       modestbranding: 1,
       rel: 0,
       playsinline: 1,
-      mute: 1
+      mute: 1,
+      // Never request YouTube closed captions/subtitles for karaoke playback.
+      cc_load_policy: 0,
+      cc_lang_pref: ''
     },
     events: {
       onReady: onPlayerReady,
