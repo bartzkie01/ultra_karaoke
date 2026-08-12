@@ -133,6 +133,11 @@ function isKaraokeTitle(title) {
   return (lower.includes('karaoke') || lower.includes('カラオケ') || lower.includes('karaoké')) && !NON_SONG_PATTERN.test(title);
 }
 
+function isDuetKaraokeTitle(title) {
+  const lower = title.toLowerCase();
+  return isKaraokeTitle(title) && lower.includes('duet') && lower.includes('karaoke');
+}
+
 function touchRoom(room) {
   if (room) {
     room.lastActiveAt = Date.now();
@@ -463,7 +468,29 @@ app.get('/api/old-songs', async (req, res) => {
 
 app.get('/api/duet-songs', async (req, res) => {
   const limit = Math.min(12, parseInt(req.query.limit, 10) || 6);
-  res.json(await verifiedSampleSongs('duet', String(req.query.room || ''), limit));
+  const roomId = String(req.query.room || '');
+  const refresh = Math.max(0, parseInt(req.query.refresh, 10) || 0);
+  const duetQueries = ['duet karaoke', 'karaoke duet version', 'male female duet karaoke', 'duet karaoke lyrics'];
+  const query = duetQueries[(hashRoomId(roomId) + refresh) % duetQueries.length];
+  try {
+    if (YOUTUBE_API_KEY) {
+      const encoded = encodeURIComponent(query);
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&q=${encoded}&maxResults=24&key=${YOUTUBE_API_KEY}`;
+      const data = await fetchYouTubeApi(url);
+      const candidates = mapSearchItems(data.items || []).filter((item) => isDuetKaraokeTitle(item.title));
+      const verified = await verifySearchResults(candidates, limit);
+      res.json(verified.slice(0, limit));
+      return;
+    }
+    const response = await fetch(`https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', Accept: 'text/html' }
+    });
+    const candidates = parseYouTubeResults(await response.text()).filter((item) => isDuetKaraokeTitle(item.title));
+    const verified = await verifySearchResults(candidates, limit);
+    res.json(verified.slice(0, limit));
+  } catch (err) {
+    res.json([]);
+  }
 });
 
 app.get('/api/suggestions', async (req, res) => {

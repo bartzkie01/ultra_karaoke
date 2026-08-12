@@ -41,6 +41,7 @@ let currentPlaylist = [];
 let viralLimit = 8;
 let oldLimit = 6;
 let duetLimit = 4;
+let duetRefresh = 0;
 let searchLimit = 8;
 let activeSearchQuery = 'karaoke';
 let searchController = null;
@@ -606,7 +607,7 @@ async function fetchOldSongs() {
 async function fetchDuetSongs() {
   duetSongs = [];
   renderDuetSongs();
-  const response = await fetch(`/api/duet-songs?limit=${duetLimit}&room=${encodeURIComponent(roomId)}`);
+  const response = await fetch(`/api/duet-songs?limit=${duetLimit}&room=${encodeURIComponent(roomId)}&refresh=${duetRefresh}`);
   if (!response.ok) {
     duetSongs = [];
     renderDuetSongs();
@@ -736,6 +737,7 @@ function setupListeners() {
   const loadMoreViralBtn = document.getElementById('loadMoreViralBtn');
   const loadMoreSearchBtn = document.getElementById('loadMoreSearchBtn');
   const loadMoreDuetBtn = document.getElementById('loadMoreDuetBtn');
+  const refreshDuetBtn = document.getElementById('refreshDuetBtn');
   loadMoreSearchBtn?.addEventListener('click', () => {
     fetchSearch(activeSearchQuery || 'karaoke', Math.min(20, searchLimit + 6));
   });
@@ -748,6 +750,10 @@ function setupListeners() {
   });
   loadMoreDuetBtn?.addEventListener('click', async () => {
     duetLimit = Math.min(12, duetLimit + 3);
+    await fetchDuetSongs();
+  });
+  refreshDuetBtn?.addEventListener('click', async () => {
+    duetRefresh += 1;
     await fetchDuetSongs();
   });
 }
