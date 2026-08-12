@@ -3,25 +3,55 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IDS R06 Karaoke</title>
+  <title>ULTRA KARAOKE</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="page-shell home-shell glass-panel">
     <div class="hero-card">
-      <h1>IDS R06 Karaoke</h1>
+      <h1>ULTRA KARAOKE</h1>
       <p>Private karaoke rooms with reserved playlist, chat, QR share, and YouTube karaoke playback.</p>
       <div class="home-buttons">
         <button id="createRoom" class="btn btn-primary">Create Room</button>
         <button id="joinRoom" class="btn btn-secondary">Join Room</button>
+        <button id="scanQrBtn" class="btn btn-secondary">Scan QR</button>
       </div>
       <div class="home-info">
         <p>Host creates the room. Participants join by code or QR scan. The playback screen is host-controlled and ad-safe.</p>
       </div>
     </div>
-    <footer class="page-footer">developed by: rotbart</footer>
+    <footer class="page-footer">Developed by Rotbart Bolencis</footer>
   </div>
+  <div id="qrJoinModal" class="modal-backdrop qr-join-modal" hidden>
+    <div class="modal-panel glass-panel qr-join-panel" role="dialog" aria-modal="true" aria-labelledby="qrJoinTitle">
+      <div class="qr-join-header">
+        <h2 id="qrJoinTitle">Join with QR code</h2>
+        <button id="closeQrBtn" class="icon-btn" type="button" aria-label="Close QR scanner">×</button>
+      </div>
+      <p>Point your camera at an ULTRA KARAOKE room QR code, or upload a QR image.</p>
+      <video id="qrVideo" class="qr-video" playsinline muted></video>
+      <p id="qrScanStatus" class="qr-scan-status" aria-live="polite">Starting camera…</p>
+      <label class="btn btn-secondary qr-upload-btn" for="qrImageInput">Upload QR image</label>
+      <input id="qrImageInput" type="file" accept="image/*" hidden />
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js" defer></script>
   <script>
+    const QR_CODE_PATTERN = /([A-Z0-9]{6})(?:\/?(?:[?#].*)?)?$/i;
+
+    function roomIdFromQr(value) {
+      const text = String(value || '').trim();
+      const match = text.match(QR_CODE_PATTERN) || text.match(/([A-Z0-9]{6})/i);
+      return match ? match[1].toUpperCase() : null;
+    }
+
+    function joinRoomByValue(value) {
+      const roomId = roomIdFromQr(value);
+      if (!roomId) return false;
+      window.location.href = `/room/${roomId}`;
+      return true;
+    }
+
     document.getElementById('createRoom').addEventListener('click', async () => {
       const response = await fetch('/api/create-room', { method: 'POST' });
       const data = await response.json();
@@ -31,14 +61,80 @@
     document.getElementById('joinRoom').addEventListener('click', () => {
       const code = prompt('Enter room code or link');
       if (!code) return;
-      const trimmed = code.trim();
-      const match = trimmed.match(/([A-Z0-9]{6})(?:\/?(?:[?#].*)?)?$/i) || trimmed.match(/([A-Z0-9]{6})/i);
-      if (!match) {
+      if (!joinRoomByValue(code)) {
         alert('Enter a valid 6-character room code or room link.');
-        return;
       }
-      const roomId = match[1].toUpperCase();
-      window.location.href = `/room/${roomId}`;
+    });
+
+    const qrModal = document.getElementById('qrJoinModal');
+    const qrVideo = document.getElementById('qrVideo');
+    const qrStatus = document.getElementById('qrScanStatus');
+    const qrImageInput = document.getElementById('qrImageInput');
+    let qrStream = null;
+    let scanFrame = null;
+
+    function stopQrScanner() {
+      if (scanFrame) cancelAnimationFrame(scanFrame);
+      scanFrame = null;
+      if (qrStream) qrStream.getTracks().forEach((track) => track.stop());
+      qrStream = null;
+      qrVideo.srcObject = null;
+    }
+
+    function closeQrModal() {
+      stopQrScanner();
+      qrModal.hidden = true;
+    }
+
+    function scanVideoFrame() {
+      if (qrVideo.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA && window.jsQR) {
+        const canvas = document.createElement('canvas');
+        canvas.width = qrVideo.videoWidth;
+        canvas.height = qrVideo.videoHeight;
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+        const code = window.jsQR(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+        if (code && joinRoomByValue(code.data)) return;
+      }
+      scanFrame = requestAnimationFrame(scanVideoFrame);
+    }
+
+    async function openQrScanner() {
+      qrModal.hidden = false;
+      qrStatus.textContent = 'Starting camera…';
+      try {
+        qrStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+        qrVideo.srcObject = qrStream;
+        await qrVideo.play();
+        qrStatus.textContent = 'Scanning for a room QR code…';
+        scanVideoFrame();
+      } catch (error) {
+        qrStatus.textContent = 'Camera unavailable. Upload a QR image instead.';
+      }
+    }
+
+    document.getElementById('scanQrBtn').addEventListener('click', openQrScanner);
+    document.getElementById('closeQrBtn').addEventListener('click', closeQrModal);
+    qrModal.addEventListener('click', (event) => {
+      if (event.target === qrModal) closeQrModal();
+    });
+    qrImageInput.addEventListener('change', async () => {
+      const imageFile = qrImageInput.files[0];
+      if (!imageFile) return;
+      qrStatus.textContent = 'Reading QR image…';
+      const image = new Image();
+      image.src = URL.createObjectURL(imageFile);
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0);
+      URL.revokeObjectURL(image.src);
+      const code = window.jsQR?.(context.getImageData(0, 0, canvas.width, canvas.height).data, canvas.width, canvas.height);
+      if (!code || !joinRoomByValue(code.data)) {
+        qrStatus.textContent = 'No valid ULTRA KARAOKE QR code found. Try another image.';
+      }
     });
   </script>
 </body>

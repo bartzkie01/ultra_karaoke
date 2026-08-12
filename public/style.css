@@ -143,6 +143,68 @@ body {
   margin: 16px 0 10px;
 }
 
+.qr-join-modal[hidden] {
+  display: none;
+}
+
+.qr-join-panel {
+  text-align: center;
+}
+
+.qr-join-panel p {
+  margin: 0;
+  color: #d8e2ff;
+}
+
+.qr-join-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.qr-join-header h2 {
+  margin: 0;
+}
+
+.qr-video {
+  width: 100%;
+  min-height: 220px;
+  border-radius: 20px;
+  background: #050a14;
+  object-fit: cover;
+}
+
+.qr-scan-status {
+  min-height: 1.5em;
+  font-size: 0.9rem;
+}
+
+.qr-upload-btn {
+  justify-self: center;
+}
+
+.home-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  font-size: 1.55rem;
+  line-height: 1;
+  text-decoration: none;
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.home-icon-btn:hover {
+  transform: translateY(-1px);
+  background: rgba(112, 214, 255, 0.18);
+}
+
 .search-section,
 .discovery-section,
 .reserved-section,
