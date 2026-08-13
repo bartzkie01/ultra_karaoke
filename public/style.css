@@ -573,7 +573,11 @@ body {
 }
 
 .song-copy {
-  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.playlist .song-copy {
+  word-break: normal;
   overflow-wrap: break-word;
 }
 
@@ -608,6 +612,11 @@ body {
   flex: 1;
 }
 
+.playlist .song-card .song-copy strong {
+  line-height: 1.4;
+  display: block;
+}
+
 .playlist .song-card .song-card-meta {
   display: flex;
   flex-direction: row;
@@ -615,6 +624,25 @@ body {
   justify-content: flex-start;
   width: 100%;
   flex-wrap: wrap;
+}
+
+/* Search results - compact layout */
+.search-results .song-card,
+.viralList .song-card,
+.item-list .song-card {
+  grid-template-columns: 96px minmax(120px, 1fr) auto;
+  gap: 10px;
+}
+
+.search-results .song-card .song-card-meta,
+.viralList .song-card .song-card-meta,
+.item-list .song-card .song-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  width: auto;
+  min-width: 90px;
 }
 
 @media (max-width: 640px) {
