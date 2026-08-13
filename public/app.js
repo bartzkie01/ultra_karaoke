@@ -118,8 +118,10 @@ function renderPlaylist(playlist) {
         <strong>${safeText(item.title)}</strong>
         <span>requested by ${safeText(item.addedBy || 'Guest')}</span>
         ${singerLabel}
-        ${playingLabel}
-        ${upnextLabel}
+        <div style="display: flex; gap: 8px; margin-top: 6px;">
+          ${playingLabel}
+          ${upnextLabel}
+        </div>
       </div>
       <div class="song-card-meta"></div>
     `;
@@ -127,7 +129,7 @@ function renderPlaylist(playlist) {
     const meta = card.querySelector('.song-card-meta');
     if (userIsHost) {
       const editBtn = document.createElement('button');
-      editBtn.className = 'btn btn-secondary small';
+      editBtn.className = 'btn btn-secondary';
       editBtn.textContent = 'Edit Singer';
       editBtn.addEventListener('click', () => {
         const newSinger = prompt('Edit singer name', item.singer || item.addedBy || '');
@@ -138,7 +140,7 @@ function renderPlaylist(playlist) {
       meta.appendChild(editBtn);
     }
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'btn btn-secondary small';
+    removeBtn.className = 'btn btn-secondary';
     removeBtn.textContent = canRemove ? 'Remove' : 'Added';
     removeBtn.disabled = !canRemove;
     removeBtn.addEventListener('click', () => {
@@ -149,6 +151,7 @@ function renderPlaylist(playlist) {
     meta.appendChild(removeBtn);
     playlistEl.appendChild(card);
   });
+}
 }
 
 function renderUsers(users) {

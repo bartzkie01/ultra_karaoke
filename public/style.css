@@ -599,7 +599,22 @@ body {
 }
 
 .playlist .song-card {
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.playlist .song-card .song-copy {
+  flex: 1;
+}
+
+.playlist .song-card .song-card-meta {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  justify-content: flex-start;
+  width: 100%;
+  flex-wrap: wrap;
 }
 
 @media (max-width: 640px) {
@@ -1310,4 +1325,36 @@ body {
 .song-card.playing {
   border-color: rgba(94,242,183,0.22);
   box-shadow: 0 12px 40px rgba(94,242,183,0.04);
+}
+
+/* Playlist-specific styling */
+.playlist-singer {
+  display: block;
+  padding: 6px 0;
+  font-weight: 600;
+  color: #70d6ff;
+}
+
+.playlist .song-card .btn {
+  flex: 1;
+  min-width: 100px;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  border-radius: 12px;
+}
+
+.playlist .song-card .btn.btn-secondary {
+  background: rgba(112,214,255,0.08);
+  border: 1px solid rgba(112,214,255,0.2);
+  color: #70d6ff;
+}
+
+.playlist .song-card .btn.btn-secondary:hover:not(:disabled) {
+  background: rgba(112,214,255,0.15);
+  border-color: rgba(112,214,255,0.35);
+}
+
+.playlist .song-card .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
