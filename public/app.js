@@ -31,6 +31,10 @@ let scoreDismissTimer = null;
 let userIsHost = false;
 let currentRoom = null;
 let currentSong = null;
+let joining = false;
+let connectionAttempts = 0;
+let joinTimeout = null;
+const MAX_CONNECTION_ATTEMPTS = 5;
 
 let viralSongs = [];
 let oldSongs = [];
@@ -151,7 +155,6 @@ function renderPlaylist(playlist) {
     meta.appendChild(removeBtn);
     playlistEl.appendChild(card);
   });
-}
 }
 
 function renderUsers(users) {
@@ -778,30 +781,54 @@ function setupListeners() {
   });
 }
 
+function clearJoinTimeout() {
+  if (joinTimeout) {
+    clearTimeout(joinTimeout);
+    joinTimeout = null;
+  }
+}
+
+function scheduleJoinTimeout() {
+  clearJoinTimeout();
+  joinTimeout = setTimeout(() => {
+    if (joining) {
+      notify('Room join is taking longer than expected...');
+    }
+  }, 5000);
+}
+
+function emitJoin() {
+  joining = true;
+  scheduleJoinTimeout();
+  socket.emit('join-room', { roomId, name: userName });
+}
+
 joinBtn.addEventListener('click', () => {
   const name = nameInput.value.trim();
   if (!name) return;
   userName = name;
   localStorage.setItem('idsR06Name', userName);
   hideModal();
-  socket.emit('join-room', { roomId, name: userName });
+  if (socket.connected) {
+    emitJoin();
+  } else {
+    joining = true;
+  }
 });
 
 socket.on('connect', () => {
+  connectionAttempts = 0;
   if (userName) {
     hideModal();
-    socket.emit('join-room', { roomId, name: userName });
+    emitJoin();
   } else {
     showModal();
   }
 });
 
-socket.on('room-error', (message) => {
-  alert(message);
-  window.location.href = '/';
-});
-
 socket.on('room-state', (state) => {
+  clearJoinTimeout();
+  joining = false;
   autoAdvancePending = false;
   currentRoom = state;
   const wasHost = userIsHost;
@@ -818,27 +845,22 @@ socket.on('room-state', (state) => {
   updateCurrent(state.current);
 });
 
-socket.on('playlist-updated', (playlist) => {
-  if (currentRoom) currentRoom = { ...currentRoom, playlist: playlist || [] };
-  renderPlaylist(playlist);
-  // clear any pending adds that are now in the playlist
-  try {
-    (playlist || []).forEach((it) => pendingAdds.delete(it.videoId));
-  } catch (e) {}
-  // refresh visible song lists so Add buttons reflect reserved state
-  try { renderSearchResults(searchResults || []); } catch (e) {}
-  renderViralSongs();
-  renderOldSongs();
-  renderDuetSongs();
+socket.on('room-error', (message) => {
+  clearJoinTimeout();
+  joining = false;
+  alert(message);
+  window.location.href = '/';
 });
-socket.on('chat-update', (chat) => renderChat(chat));
-
-socket.on('emoji-rain', (emoji) => triggerEmojiEffect(emoji));
-
-socket.on('user-list', (users) => renderUsers(users));
 
 socket.on('connect_error', () => {
-  console.warn('Unable to connect to room server');
+  connectionAttempts += 1;
+  if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
+    notify('Connection lost. Please reload the page.');
+  }
+});
+
+socket.on('disconnect', () => {
+  notify('Disconnected from server. Trying to reconnect...');
 });
 
 setShareLink();

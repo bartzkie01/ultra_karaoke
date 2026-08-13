@@ -27,7 +27,6 @@ function saveRoomsSoon() {
       console.warn('Unable to save karaoke rooms:', err.message);
     }
   }, 250);
-  roomSaveTimer.unref();
 }
 
 function loadSavedRooms() {
@@ -786,7 +785,7 @@ setInterval(() => {
   // Cleanup expired cache entries
   cleanupCache(searchCache, MAX_CACHE_SIZE);
   cleanupCache(videoValidationCache, MAX_CACHE_SIZE);
-}, 10 * 60 * 1000).unref();
+}, 10 * 60 * 1000);
 
 // Global error handlers to prevent crashes
 process.on('uncaughtException', (err) => {
