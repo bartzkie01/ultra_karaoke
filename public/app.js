@@ -42,6 +42,7 @@ let duetSongs = [];
 let searchResults = [];
 let pendingAdds = new Set();
 let currentPlaylist = [];
+let pendingTimeouts = new Map();
 let viralLimit = 12;
 let oldLimit = 12;
 let duetLimit = 12;
@@ -557,8 +558,18 @@ function clearScorePanelAfterDelay() {
 }
 
 function addSong(song) {
-  // mark pending locally in case caller didn't
-  if (song && song.videoId) pendingAdds.add(song.videoId);
+  if (!song || !song.videoId) return;
+  pendingAdds.add(song.videoId);
+  const timeoutId = setTimeout(() => {
+    pendingAdds.delete(song.videoId);
+    pendingTimeouts.delete(song.videoId);
+    try { renderSearchResults(searchResults || []); } catch (e) {}
+    renderViralSongs();
+    renderOldSongs();
+    renderDuetSongs();
+    renderPlaylist(currentPlaylist || []);
+  }, 8000);
+  pendingTimeouts.set(song.videoId, timeoutId);
   socket.emit('add-song', {
     roomId,
     song: {
@@ -861,6 +872,32 @@ socket.on('connect_error', () => {
 
 socket.on('disconnect', () => {
   notify('Disconnected from server. Trying to reconnect...');
+});
+
+socket.on('reconnect', () => {
+  if (userName) {
+    hideModal();
+    emitJoin();
+  }
+});
+
+socket.on('playlist-updated', (playlist) => {
+  if (currentRoom) currentRoom = { ...currentRoom, playlist: playlist || [] };
+  renderPlaylist(playlist);
+  try {
+    (playlist || []).forEach((it) => {
+      pendingAdds.delete(it.videoId);
+      const tid = pendingTimeouts.get(it.videoId);
+      if (tid) {
+        clearTimeout(tid);
+        pendingTimeouts.delete(it.videoId);
+      }
+    });
+  } catch (e) {}
+  try { renderSearchResults(searchResults || []); } catch (e) {}
+  renderViralSongs();
+  renderOldSongs();
+  renderDuetSongs();
 });
 
 setShareLink();
