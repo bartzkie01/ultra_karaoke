@@ -28,7 +28,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  padding: 24px;
+  padding: 16px;
 }
 
 .glass-panel {
@@ -228,11 +228,11 @@ body {
 
 .room-grid {
   display: grid;
-  gap: 20px;
+  gap: 14px;
   grid-template-columns: minmax(250px, 0.7fr) minmax(600px, 1.8fr) minmax(280px, 0.8fr);
   grid-template-areas: "left center right";
   align-items: start;
-  margin: 20px 0;
+  margin: 12px 0;
 }
 
 .left-panel { grid-area: left; }
@@ -244,8 +244,8 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 18px 24px;
-  margin-bottom: 12px;
+  padding: 12px 18px;
+  margin-bottom: 8px;
 }
 
 .room-title {
@@ -266,7 +266,7 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin: 16px 0 10px;
+  margin: 8px 0 6px;
 }
 
 .qr-join-modal[hidden] {
@@ -336,7 +336,7 @@ body {
 .reserved-section,
 .chat-section {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .music-browser-layout {
@@ -368,7 +368,7 @@ body {
 
 .search-section,
 .reserved-section {
-  padding-bottom: 18px;
+  padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
 }
 
@@ -385,7 +385,7 @@ body {
 
 .discovery-section,
 .chat-section {
-  padding-top: 18px;
+  padding-top: 10px;
 }
 
 .tab-btn {
@@ -405,12 +405,12 @@ body {
 
 .tab-panels {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .tab-panel {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .hide-panel {
@@ -421,7 +421,7 @@ body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .search-results {
@@ -467,8 +467,8 @@ body {
 }
 
 .panel {
-  padding: 24px;
-  border-radius: 32px;
+  padding: 16px;
+  border-radius: 28px;
   background: rgba(18, 28, 50, 0.76);
   border: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -478,7 +478,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .panel-header h2 {
@@ -511,14 +511,14 @@ body {
 .chat-list,
 .user-list {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .song-card,
 .chat-bubble,
 .user-chip,
 .search-suggestion {
-  border-radius: 22px;
+  border-radius: 18px;
   background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
   border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(12px);
@@ -527,49 +527,34 @@ body {
 
 .song-card {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
-  padding: 10px;
+  gap: 10px;
+  padding: 8px;
 }
 
 .song-card img {
-  width: 96px;
-  height: 64px;
-  border-radius: 10px;
+  width: 80px;
+  height: 54px;
+  border-radius: 8px;
   object-fit: cover;
   min-height: 0;
 }
 
 .song-card .song-copy {
-  display: grid;
-  gap: 8px;
-}
-
-.song-card .song-copy strong {
-  font-size: 1rem;
-}
-
-.song-card-meta {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.song-card .song-copy {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .song-copy strong {
-  font-size: 0.96rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
 }
 
 .song-copy span {
   opacity: 0.7;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
 }
 
 .song-copy {
@@ -589,13 +574,16 @@ body {
 
 .song-card .btn {
   min-width: auto;
-  padding: 8px 12px;
-  font-size: 0.85rem;
+  padding: 6px 12px;
+  font-size: 0.8rem;
 }
 
 .song-card .singer-name-input {
   grid-column: 2 / -1;
   margin: 0;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  height: 32px;
 }
 
 .song-card .song-card-meta {
@@ -605,7 +593,7 @@ body {
 .playlist .song-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .playlist .song-card .song-copy {
@@ -613,8 +601,9 @@ body {
 }
 
 .playlist .song-card .song-copy strong {
-  line-height: 1.4;
+  line-height: 1.35;
   display: block;
+  font-size: 0.9rem;
 }
 
 .playlist .song-card .song-card-meta {
@@ -630,7 +619,7 @@ body {
 .search-results .song-card,
 .viralList .song-card,
 .item-list .song-card {
-  grid-template-columns: 96px minmax(120px, 1fr) auto;
+  grid-template-columns: 80px minmax(100px, 1fr) auto;
   gap: 10px;
 }
 
@@ -642,17 +631,19 @@ body {
   gap: 6px;
   align-items: stretch;
   width: auto;
-  min-width: 90px;
+  min-width: 80px;
 }
 
 @media (max-width: 640px) {
   .song-card {
-    grid-template-columns: 82px minmax(0, 1fr);
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 8px;
+    padding: 6px;
   }
 
   .song-card img {
-    width: 82px;
-    height: 56px;
+    width: 70px;
+    height: 48px;
   }
 
   .song-card .song-card-meta {
@@ -662,6 +653,14 @@ body {
 
   .song-card .singer-name-input {
     grid-column: 1 / -1;
+  }
+
+  .song-copy strong {
+    font-size: 0.85rem;
+  }
+
+  .song-copy span {
+    font-size: 0.75rem;
   }
 }
 
@@ -822,7 +821,7 @@ body {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .current-title {
@@ -847,7 +846,7 @@ body {
 }
 
 .video-footer {
-  margin-top: 16px;
+  margin-top: 10px;
 }
 
 .top-banner {
@@ -875,13 +874,13 @@ body {
 
 .emoji-toolbar {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
   background: rgba(255,255,255,0.05);
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 24px;
-  padding: 10px;
+  padding: 8px;
 }
 
 .emoji-btn {
@@ -903,7 +902,7 @@ body {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .search-suggestions {
@@ -911,7 +910,7 @@ body {
   gap: 10px;
   max-height: 220px;
   overflow-y: auto;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
   padding-right: 2px;
 }
 
@@ -982,7 +981,7 @@ body {
 .chat-input-row {
   display: flex;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 8px;
 }
 
 .user-chip {
@@ -998,8 +997,8 @@ body {
 
 .share-card {
   display: grid;
-  gap: 14px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .qr-block {
@@ -1053,7 +1052,7 @@ body {
 }
 
 .right-panel .discovery-section {
-  max-height: min(48vh, 500px);
+  max-height: min(42vh, 440px);
   overflow-y: auto;
   padding-right: 8px;
 }
@@ -1069,9 +1068,9 @@ body {
 
 .center-chat-section {
   display: grid;
-  gap: 12px;
-  margin-top: 20px;
-  padding-top: 18px;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
