@@ -711,31 +711,34 @@ body {
   top: 10px;
   right: 10px;
   left: auto;
-  z-index: 5;
+  z-index: 10;
   max-width: 55%;
   overflow: hidden;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.85;
+  isolation: isolate;
 }
 
 .reserved-list-track {
   display: flex;
   gap: 8px;
   will-change: transform;
-  animation: reservedScroll 30s linear infinite;
+  animation: reservedScroll 24s linear infinite;
 }
 
 .reserved-list-chip {
   flex: 0 0 auto;
-  padding: 4px 10px;
+  padding: 5px 12px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 0.75rem;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.8rem;
+  font-weight: 600;
   white-space: nowrap;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   line-height: 1.4;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
 @keyframes reservedScroll {
@@ -751,8 +754,8 @@ body {
   }
 
   .reserved-list-chip {
-    font-size: 0.7rem;
-    padding: 3px 8px;
+    font-size: 0.72rem;
+    padding: 4px 10px;
   }
 }
 
@@ -875,6 +878,7 @@ body {
 
 .video-shell {
   position: relative;
+  isolation: isolate;
 }
 
 .center-header {

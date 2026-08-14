@@ -163,14 +163,14 @@ function renderPlaylist(playlist) {
 function updateReservedListOverlay(playlist) {
   const track = document.getElementById('reservedListTrack');
   if (!track) return;
+  const overlay = document.getElementById('reservedListOverlay');
+  if (!overlay) return;
   if (!playlist || !playlist.length) {
-    track.innerHTML = '<span class="reserved-list-chip reserved-list-empty">No reserved songs</span>';
-    track.style.animation = 'none';
+    overlay.innerHTML = '<div class="reserved-list-track" id="reservedListTrack"><span class="reserved-list-chip reserved-list-empty">No reserved songs</span></div>';
     return;
   }
   const chips = playlist.map((item) => `<span class="reserved-list-chip">${safeText(item.title)}</span>`).join('');
-  track.innerHTML = chips + chips;
-  track.style.animation = '';
+  overlay.innerHTML = `<div class="reserved-list-track" id="reservedListTrack">${chips}${chips}</div>`;
 }
 
 function renderUsers(users) {
@@ -914,6 +914,16 @@ socket.on('playlist-updated', (playlist) => {
   renderOldSongs();
   renderDuetSongs();
 });
+
+const playlistObserver = new MutationObserver(() => {
+  const cards = playlistEl.querySelectorAll('.song-card');
+  const titles = Array.from(cards).map((card) => {
+    const strong = card.querySelector('.song-copy strong');
+    return strong ? strong.textContent.trim() : '';
+  }).filter(Boolean);
+  if (titles.length) updateReservedListOverlay(titles.map((t) => ({ title: t })));
+});
+playlistObserver.observe(playlistEl, { childList: true, subtree: true });
 
 setShareLink();
 setupListeners();
