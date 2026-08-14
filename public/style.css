@@ -706,6 +706,56 @@ body {
   background: linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.38));
 }
 
+.reserved-list-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  left: auto;
+  z-index: 5;
+  max-width: 55%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+.reserved-list-track {
+  display: flex;
+  gap: 8px;
+  will-change: transform;
+  animation: reservedScroll 30s linear infinite;
+}
+
+.reserved-list-chip {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  backdrop-filter: blur(8px);
+  line-height: 1.4;
+}
+
+@keyframes reservedScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@media (max-width: 640px) {
+  .reserved-list-overlay {
+    max-width: 70%;
+    top: 8px;
+    right: 8px;
+  }
+
+  .reserved-list-chip {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+  }
+}
+
 .video-placeholder {
   display: grid;
   place-items: center;

@@ -101,6 +101,7 @@ function renderPlaylist(playlist) {
   playlistEl.innerHTML = '';
   if (!playlist.length) {
     playlistEl.innerHTML = '<div class="song-card"><div class="song-copy"><strong>No reserved songs yet</strong><span>Search for karaoke videos to add.</span></div></div>';
+    updateReservedListOverlay([]);
     return;
   }
   // determine which song is next (for label)
@@ -156,6 +157,20 @@ function renderPlaylist(playlist) {
     meta.appendChild(removeBtn);
     playlistEl.appendChild(card);
   });
+  updateReservedListOverlay(playlist || []);
+}
+
+function updateReservedListOverlay(playlist) {
+  const track = document.getElementById('reservedListTrack');
+  if (!track) return;
+  if (!playlist || !playlist.length) {
+    track.innerHTML = '<span class="reserved-list-chip reserved-list-empty">No reserved songs</span>';
+    track.style.animation = 'none';
+    return;
+  }
+  const chips = playlist.map((item) => `<span class="reserved-list-chip">${safeText(item.title)}</span>`).join('');
+  track.innerHTML = chips + chips;
+  track.style.animation = '';
 }
 
 function renderUsers(users) {
