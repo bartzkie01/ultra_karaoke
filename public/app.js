@@ -164,14 +164,11 @@ function updateReservedListOverlay(playlist) {
   const overlay = document.getElementById('reservedListOverlay');
   if (!overlay) return;
   if (!playlist || !playlist.length) {
-    overlay.innerHTML = '<div class="reserved-list-chip reserved-list-empty">No reserved songs</div>';
+    overlay.innerHTML = '<div class="reserved-list-track" id="reservedListTrack"><span class="reserved-list-chip">No reserved songs</span></div>';
     return;
   }
-  const chips = playlist.map((item) => {
-    const title = safeText(item.title);
-    return `<div class="reserved-list-chip"><span class="scrolling-text">${title}&nbsp;&nbsp;&nbsp;&nbsp;${title}</span></div>`;
-  }).join('');
-  overlay.innerHTML = chips;
+  const chips = playlist.map((item) => `<span class="reserved-list-chip">${safeText(item.title)}&nbsp;&nbsp;&nbsp;&nbsp;</span>`).join('');
+  overlay.innerHTML = `<div class="reserved-list-track" id="reservedListTrack">${chips}${chips}</div>`;
 }
 
 function renderUsers(users) {
@@ -720,7 +717,7 @@ function setupListeners() {
   nextBtn.addEventListener('click', () => socket.emit('next-song', { roomId }));
   stopBtn.addEventListener('click', () => socket.emit('stop-play', { roomId }));
   fullscreenBtn.addEventListener('click', async () => {
-    const target = videoFrame;
+    const target = document.querySelector('.video-shell');
     if (target.requestFullscreen) {
       await target.requestFullscreen();
     }
