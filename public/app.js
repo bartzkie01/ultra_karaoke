@@ -9,7 +9,6 @@ const viralList = document.getElementById('viralList');
 const searchInput = document.getElementById('searchInput');
 const searchButton = document.getElementById('searchButton');
 const suggestionsEl = document.getElementById('searchSuggestions');
-const banner = document.getElementById('banner');
 const videoFrame = document.getElementById('videoFrame');
 const qrCode = document.getElementById('qrCode');
 const shareLinkBtn = document.getElementById('shareLinkBtn');
@@ -376,7 +375,6 @@ function updateCurrent(current) {
       placeholder.innerHTML = '<div class="video-placeholder">Host controls the karaoke stage. Add songs or cheer with emojis.</div>';
     }
   }
-  showBanner();
 }
 
 function ensureYouTubeApi() {
@@ -541,14 +539,6 @@ window.onYouTubeIframeAPIReady = () => {
     loadKaraokeVideo(pendingVideoId);
   }
 };
-
-function showBanner() {
-  const title = currentSong?.title || '';
-  const singer = currentSong?.singer ? ` Singer: ${currentSong.singer}` : '';
-  banner.textContent = `Now Playing: ${title}${singer}`;
-  banner.classList.add('visible');
-  setTimeout(() => banner.classList.remove('visible'), 4000);
-}
 
 function updateParticipantView() {
   const mainPanel = document.querySelector('main');

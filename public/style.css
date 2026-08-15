@@ -926,30 +926,6 @@ body {
   margin-top: 10px;
 }
 
-.top-banner {
-  position: absolute;
-  left: 50%;
-  top: 20px;
-  transform: translateX(-50%);
-  max-width: min(92%, 520px);
-  text-align: center;
-  letter-spacing: 0.01em;
-  background: rgba(15, 22, 42, 0.95);
-  color: #eef3ff;
-  padding: 14px 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
-  transition: transform 0.5s ease, opacity 0.3s ease;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-}
-.top-banner.visible {
-  opacity: 1;
-  transform: translateX(-50%);
-}
-
 .emoji-toolbar {
   display: flex;
   gap: 10px;
