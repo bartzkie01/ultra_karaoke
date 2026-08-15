@@ -164,11 +164,12 @@ function updateReservedListOverlay(playlist) {
   const overlay = document.getElementById('reservedListOverlay');
   if (!overlay) return;
   if (!playlist || !playlist.length) {
-    overlay.innerHTML = '<div class="reserved-list-track" id="reservedListTrack"><span class="reserved-list-chip">No reserved songs</span></div>';
+    overlay.innerHTML = '<span class="reserved-list-text">No reserved songs</span>';
     return;
   }
-  const chips = playlist.map((item) => `<span class="reserved-list-chip">${safeText(item.title)}&nbsp;&nbsp;&nbsp;&nbsp;</span>`).join('');
-  overlay.innerHTML = `<div class="reserved-list-track" id="reservedListTrack">${chips}${chips}</div>`;
+  const titles = playlist.map((item) => safeText(item.title)).join('  •  ');
+  const doubled = `${titles}  •  ${titles}`;
+  overlay.innerHTML = `<span class="reserved-list-text">${doubled}</span>`;
 }
 
 function renderUsers(users) {
