@@ -161,16 +161,17 @@ function renderPlaylist(playlist) {
 }
 
 function updateReservedListOverlay(playlist) {
-  const track = document.getElementById('reservedListTrack');
-  if (!track) return;
   const overlay = document.getElementById('reservedListOverlay');
   if (!overlay) return;
   if (!playlist || !playlist.length) {
-    overlay.innerHTML = '<div class="reserved-list-track" id="reservedListTrack"><span class="reserved-list-chip reserved-list-empty">No reserved songs</span></div>';
+    overlay.innerHTML = '<div class="reserved-list-chip reserved-list-empty">No reserved songs</div>';
     return;
   }
-  const chips = playlist.map((item) => `<span class="reserved-list-chip">${safeText(item.title)}</span>`).join('');
-  overlay.innerHTML = `<div class="reserved-list-track" id="reservedListTrack">${chips}${chips}</div>`;
+  const chips = playlist.map((item) => {
+    const title = safeText(item.title);
+    return `<div class="reserved-list-chip"><span class="scrolling-text">${title}&nbsp;&nbsp;&nbsp;&nbsp;${title}</span></div>`;
+  }).join('');
+  overlay.innerHTML = chips;
 }
 
 function renderUsers(users) {

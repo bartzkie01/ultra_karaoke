@@ -709,53 +709,64 @@ body {
 .reserved-list-overlay {
   position: absolute;
   top: 10px;
-  right: 10px;
-  left: auto;
+  left: 10px;
+  right: auto;
   z-index: 10;
-  max-width: 55%;
+  max-width: 45%;
   overflow: hidden;
   pointer-events: none;
   opacity: 0.85;
   isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .reserved-list-track {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  will-change: transform;
-  animation: reservedScroll 24s linear infinite;
 }
 
 .reserved-list-chip {
-  flex: 0 0 auto;
-  padding: 5px 12px;
+  position: relative;
+  width: 100%;
+  padding: 6px 14px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.22);
   color: rgba(255, 255, 255, 0.95);
   font-size: 0.8rem;
   font-weight: 600;
-  white-space: nowrap;
   backdrop-filter: blur(10px);
   line-height: 1.4;
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-@keyframes reservedScroll {
+.reserved-list-chip .scrolling-text {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  animation: textScroll 6s linear infinite;
+}
+
+@keyframes textScroll {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
 
 @media (max-width: 640px) {
   .reserved-list-overlay {
-    max-width: 70%;
+    max-width: 65%;
     top: 8px;
-    right: 8px;
+    left: 8px;
   }
 
   .reserved-list-chip {
     font-size: 0.72rem;
-    padding: 4px 10px;
+    padding: 5px 12px;
   }
 }
 
@@ -917,12 +928,12 @@ body {
 
 .top-banner {
   position: absolute;
-  left: 20px;
+  left: 50%;
   top: 20px;
-  max-width: calc(100% - 40px);
-  text-align: left;
+  transform: translateX(-50%);
+  max-width: min(92%, 520px);
+  text-align: center;
   letter-spacing: 0.01em;
-  transform: none;
   background: rgba(15, 22, 42, 0.95);
   color: #eef3ff;
   padding: 14px 24px;
@@ -936,6 +947,7 @@ body {
 }
 .top-banner.visible {
   opacity: 1;
+  transform: translateX(-50%);
 }
 
 .emoji-toolbar {
