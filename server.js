@@ -15,29 +15,50 @@ const ROOM_INACTIVITY_MS = 2 * 60 * 60 * 1000;
 const ROOMS_STORE_FILE = path.join(__dirname, 'data', 'rooms.json');
 let roomSaveTimer = null;
 
-function saveRoomsSoon() {
-  if (roomSaveTimer) return;
-  roomSaveTimer = setTimeout(() => {
+function saveRoomsSoon(immediate = false) {
+  console.log(`[save] saveRoomsSoon called immediate=${immediate} rooms=${rooms.size} timer=${roomSaveTimer ? 'set' : 'clear'}`);
+  if (roomSaveTimer && !immediate) return;
+  if (roomSaveTimer) {
+    clearTimeout(roomSaveTimer);
     roomSaveTimer = null;
-    try {
-      fs.mkdirSync(path.dirname(ROOMS_STORE_FILE), { recursive: true });
-      const savedRooms = [...rooms.values()].map(({ users, hostId, ...room }) => room);
-      fs.writeFileSync(ROOMS_STORE_FILE, JSON.stringify(savedRooms), 'utf8');
-    } catch (err) {
-      console.warn('Unable to save karaoke rooms:', err.message);
-    }
-  }, 250);
+  }
+  try {
+    fs.mkdirSync(path.dirname(ROOMS_STORE_FILE), { recursive: true });
+    const savedRooms = [...rooms.values()].map((room) => {
+      const { users, ...rest } = room;
+      return { ...rest, savedAt: Date.now() };
+    });
+    fs.writeFileSync(ROOMS_STORE_FILE, JSON.stringify(savedRooms));
+    console.log(`[save] rooms persisted count=${savedRooms.length}`);
+  } catch (err) {
+    console.warn('Unable to save karaoke rooms:', err.message);
+  }
 }
 
 function loadSavedRooms() {
   try {
+    if (!fs.existsSync(ROOMS_STORE_FILE)) return;
     const savedRooms = JSON.parse(fs.readFileSync(ROOMS_STORE_FILE, 'utf8'));
     if (!Array.isArray(savedRooms)) return;
     const now = Date.now();
+    let loaded = 0;
     savedRooms.forEach((room) => {
       if (!room?.id || now - (room.lastActiveAt || 0) >= ROOM_INACTIVITY_MS) return;
-      rooms.set(room.id, { ...room, users: {}, hostId: null, lastActiveAt: now });
+      const hostId = room.hostId || null;
+      rooms.set(room.id, {
+        id: room.id,
+        users: {},
+        playlist: room.playlist || [],
+        current: room.current || null,
+        bannerVisible: room.bannerVisible || false,
+        hostId,
+        chat: room.chat || [],
+        lastActiveAt: now,
+        playback: room.playback || null
+      });
+      loaded += 1;
     });
+    console.log(`[load] loaded rooms from disk count=${loaded} total=${rooms.size}`);
   } catch (err) {
     if (err.code !== 'ENOENT') console.warn('Unable to load saved karaoke rooms:', err.message);
   }
@@ -69,7 +90,8 @@ function createRoom() {
     playback: null
   };
   rooms.set(id, room);
-  saveRoomsSoon();
+  saveRoomsSoon(true);
+  console.log(`[create-room] created room=${id} totalRooms=${rooms.size}`);
   return room;
 }
 
@@ -265,8 +287,14 @@ function sortByViewCount(items, statsMap) {
 }
 
 app.post('/api/create-room', (req, res) => {
-  const room = createRoom();
-  res.json({ roomId: room.id, url: `/room/${room.id}` });
+  try {
+    const room = createRoom();
+    console.log(`[create-room] room=${room.id} url=/room/${room.id} totalRooms=${rooms.size}`);
+    res.json({ roomId: room.id, url: `/room/${room.id}` });
+  } catch (err) {
+    console.error('create-room error:', err.message);
+    res.status(500).json({ error: 'Failed to create room' });
+  }
 });
 
 app.get('/room/:roomId', (req, res) => {
@@ -597,9 +625,36 @@ io.on('connection', (socket) => {
         socket.emit('room-error', 'Invalid room code');
         return;
       }
-      const room = rooms.get(normalizedRoomId);
+      let room = rooms.get(normalizedRoomId);
       console.log(`[join-room] lookup result=${room ? 'found' : 'MISSING'} room.users=${room ? Object.keys(room.users).length : 'n/a'}`);
       if (!room) {
+        try {
+          if (fs.existsSync(ROOMS_STORE_FILE)) {
+            const savedRooms = JSON.parse(fs.readFileSync(ROOMS_STORE_FILE, 'utf8'));
+            const saved = (Array.isArray(savedRooms) ? savedRooms : []).find((r) => r.id === normalizedRoomId);
+            if (saved && Date.now() - (saved.lastActiveAt || 0) < ROOM_INACTIVITY_MS) {
+              const hostId = saved.hostId || null;
+              room = {
+                id: saved.id,
+                users: {},
+                playlist: saved.playlist || [],
+                current: saved.current || null,
+                bannerVisible: saved.bannerVisible || false,
+                hostId,
+                chat: saved.chat || [],
+                lastActiveAt: Date.now(),
+                playback: saved.playback || null
+              };
+              rooms.set(normalizedRoomId, room);
+              console.log(`[join-room] recovered room from disk id=${normalizedRoomId}`);
+            }
+          }
+        } catch (e) {
+          console.warn('[join-room] disk recovery failed:', e.message);
+        }
+      }
+      if (!room) {
+        console.log(`[join-room] all rooms in memory: ${[...rooms.keys()].join(', ') || 'none'}`);
         socket.emit('room-error', 'This room has expired or is unavailable. Ask the host for a new link.');
         return;
       }
