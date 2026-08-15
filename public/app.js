@@ -163,13 +163,38 @@ function updateReservedListOverlay(playlist) {
   const overlay = document.getElementById('reservedListOverlay');
   if (!overlay) return;
   if (!playlist || !playlist.length) {
-    overlay.innerHTML = '<span class="reserved-list-text">No reserved songs</span>';
+    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">No Reserved Songs</span>';
     return;
   }
   const sorted = [...playlist].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-  const titles = sorted.map((item) => safeText(item.title)).join('  •  ');
+  const filtered = sorted.map((item) => cleanReservedTitle(item.title)).filter(Boolean);
+  if (!filtered.length) {
+    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">No Reserved Songs</span>';
+    return;
+  }
+  if (filtered.length === 1) {
+    overlay.innerHTML = `<span class="reserved-list-text reserved-list-static">${safeText(filtered[0])}</span>`;
+    return;
+  }
+  const titles = filtered.join('  •  ');
   const doubled = `${titles}  •  ${titles}`;
-  overlay.innerHTML = `<span class="reserved-list-text">${doubled}</span>`;
+  overlay.innerHTML = `<span class="reserved-list-text">${safeText(doubled)}</span>`;
+}
+
+function cleanReservedTitle(title) {
+  if (!title) return '';
+  let t = title;
+  t = t.replace(/\s*[-–—|:•·]\s*Karaoke\b.*$/i, '');
+  t = t.replace(/\s*[-–—|:•·]\s*Instrumental\b.*$/i, '');
+  t = t.replace(/\s*\(Karaoke\)\s*$/i, '');
+  t = t.replace(/\s*\(Instrumental\)\s*$/i, '');
+  t = t.replace(/\s*\[Karaoke\]\s*$/i, '');
+  t = t.replace(/\s*\[Instrumental\]\s*$/i, '');
+  t = t.replace(/\s*Karaoke\s+Version\s*$/i, '');
+  t = t.replace(/\s*Instrumental\s+Version\s*$/i, '');
+  t = t.replace(/\s*Backing\s+Track\s*$/i, '');
+  t = t.replace(/\s*Cover\s*$/i, '');
+  return t.trim();
 }
 
 function renderUsers(users) {
