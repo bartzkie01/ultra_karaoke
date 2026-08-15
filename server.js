@@ -15,24 +15,18 @@ const ROOM_INACTIVITY_MS = 2 * 60 * 60 * 1000;
 const ROOMS_STORE_FILE = path.join(__dirname, 'data', 'rooms.json');
 let roomSaveTimer = null;
 
-function saveRoomsSoon(immediate = false) {
-  console.log(`[save] saveRoomsSoon called immediate=${immediate} rooms=${rooms.size} timer=${roomSaveTimer ? 'set' : 'clear'}`);
-  if (roomSaveTimer && !immediate) return;
-  if (roomSaveTimer) {
-    clearTimeout(roomSaveTimer);
+function saveRoomsSoon() {
+  if (roomSaveTimer) return;
+  roomSaveTimer = setTimeout(() => {
     roomSaveTimer = null;
-  }
-  try {
-    fs.mkdirSync(path.dirname(ROOMS_STORE_FILE), { recursive: true });
-    const savedRooms = [...rooms.values()].map((room) => {
-      const { users, ...rest } = room;
-      return { ...rest, savedAt: Date.now() };
-    });
-    fs.writeFileSync(ROOMS_STORE_FILE, JSON.stringify(savedRooms));
-    console.log(`[save] rooms persisted count=${savedRooms.length}`);
-  } catch (err) {
-    console.warn('Unable to save karaoke rooms:', err.message);
-  }
+    try {
+      fs.mkdirSync(path.dirname(ROOMS_STORE_FILE), { recursive: true });
+      const savedRooms = [...rooms.values()].map(({ users, ...rest }) => rest);
+      fs.writeFileSync(ROOMS_STORE_FILE, JSON.stringify(savedRooms));
+    } catch (err) {
+      console.warn('Unable to save karaoke rooms:', err.message);
+    }
+  }, 250);
 }
 
 function loadSavedRooms() {
@@ -53,8 +47,7 @@ function loadSavedRooms() {
         bannerVisible: room.bannerVisible || false,
         hostId,
         chat: room.chat || [],
-        lastActiveAt: now,
-        playback: room.playback || null
+        lastActiveAt: now
       });
       loaded += 1;
     });
@@ -86,11 +79,10 @@ function createRoom() {
     bannerVisible: false,
     hostId: null,
     chat: [],
-    lastActiveAt: Date.now(),
-    playback: null
+    lastActiveAt: Date.now()
   };
   rooms.set(id, room);
-  saveRoomsSoon(true);
+  saveRoomsSoon();
   console.log(`[create-room] created room=${id} totalRooms=${rooms.size}`);
   return room;
 }
@@ -103,8 +95,7 @@ function roomState(room) {
     users: Object.values(room.users),
     hostId: room.hostId,
     chat: room.chat,
-    bannerVisible: room.bannerVisible,
-    playback: room.playback
+    bannerVisible: room.bannerVisible
   };
 }
 
@@ -113,7 +104,6 @@ function startNextSong(room) {
   if (room.playlist.length === 0) {
     room.current = null;
     room.bannerVisible = false;
-    room.playback = null;
     return;
   }
   const next = room.playlist.shift();
@@ -620,13 +610,11 @@ io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, name }) => {
     try {
       const normalizedRoomId = String(roomId || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      console.log(`[join-room] socket=${socket.id} roomId=${normalizedRoomId} rooms=${rooms.size}`);
       if (!/^[A-HJ-NP-Z2-9]{6}$/.test(normalizedRoomId)) {
         socket.emit('room-error', 'Invalid room code');
         return;
       }
       let room = rooms.get(normalizedRoomId);
-      console.log(`[join-room] lookup result=${room ? 'found' : 'MISSING'} room.users=${room ? Object.keys(room.users).length : 'n/a'}`);
       if (!room) {
         try {
           if (fs.existsSync(ROOMS_STORE_FILE)) {
@@ -642,11 +630,9 @@ io.on('connection', (socket) => {
                 bannerVisible: saved.bannerVisible || false,
                 hostId,
                 chat: saved.chat || [],
-                lastActiveAt: Date.now(),
-                playback: saved.playback || null
+                lastActiveAt: Date.now()
               };
               rooms.set(normalizedRoomId, room);
-              console.log(`[join-room] recovered room from disk id=${normalizedRoomId}`);
             }
           }
         } catch (e) {
@@ -654,7 +640,6 @@ io.on('connection', (socket) => {
         }
       }
       if (!room) {
-        console.log(`[join-room] all rooms in memory: ${[...rooms.keys()].join(', ') || 'none'}`);
         socket.emit('room-error', 'This room has expired or is unavailable. Ask the host for a new link.');
         return;
       }
@@ -740,24 +725,9 @@ io.on('connection', (socket) => {
       touchRoom(room);
       room.current = null;
       room.bannerVisible = false;
-      room.playback = null;
       io.to(roomId).emit('room-state', roomState(room));
     } catch (err) {
       console.error('stop-play error:', err.message);
-    }
-  });
-
-  socket.on('playback-sync', ({ roomId, playback }) => {
-    try {
-      const room = rooms.get(roomId);
-      if (!room) return;
-      const user = room.users[socket.id];
-      if (!user?.isHost) return;
-      touchRoom(room);
-      room.playback = playback;
-      socket.to(roomId).emit('playback-sync', playback);
-    } catch (err) {
-      console.error('playback-sync error:', err.message);
     }
   });
 

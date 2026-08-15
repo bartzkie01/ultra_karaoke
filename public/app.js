@@ -53,8 +53,6 @@ let searchController = null;
 let suggestionsController = null;
 let suggestionTimer = null;
 let autoAdvancePending = false;
-let playbackSyncTimer = null;
-let lastSyncedVideoId = null;
 
 function setShareLink() {
   const shareUrl = `${window.location.origin}/room/${roomId}`;
@@ -377,28 +375,33 @@ function updateCurrent(current) {
   ytPlayer = null;
 
   const emojis = getScoreEmojis(current.score);
-  videoFrame.innerHTML = `
-    ${userIsHost ? '<div class="host-watermark" aria-hidden="true">Ultra Karaoke</div>' : ''}
-    <div class="score-panel" id="scorePanel">
-      <h3>Stage applause!</h3>
-      <div class="score-value">${current.score}</div>
-      <p class="score-comment">${getScoreComment(current.score)}</p>
-      <div class="score-emojis">${emojis.map((emoji) => `<span>${safeText(emoji)}</span>`).join('')}</div>
-    </div>
-    <div id="playerContainer"></div>
-  `;
+  if (userIsHost) {
+    videoFrame.innerHTML = `
+      <div class="host-watermark" aria-hidden="true">Ultra Karaoke</div>
+      <div class="score-panel" id="scorePanel">
+        <h3>Stage applause!</h3>
+        <div class="score-value">${current.score}</div>
+        <p class="score-comment">${getScoreComment(current.score)}</p>
+        <div class="score-emojis">${emojis.map((emoji) => `<span>${safeText(emoji)}</span>`).join('')}</div>
+      </div>
+      <div id="playerContainer"></div>
+    `;
+    pendingVideoId = current.videoId;
+    if (youtubeReady) {
+      loadKaraokeVideo(current.videoId);
+    } else {
+      ensureYouTubeApi();
+    }
+  } else {
+    videoFrame.innerHTML = `
+      <div class="video-placeholder">Host is playing: ${safeText(current.title)}</div>
+    `;
+  }
 
   const scorePanel = document.getElementById('scorePanel');
   if (scorePanel) {
     scorePanel.classList.remove('visible');
     scorePanel.style.opacity = '0';
-  }
-
-  pendingVideoId = current.videoId;
-  if (youtubeReady) {
-    loadKaraokeVideo(current.videoId);
-  } else {
-    ensureYouTubeApi();
   }
 }
 
@@ -425,64 +428,6 @@ function getScoreEmojis(score) {
   if (score >= 85) return ['👏', '🎶', '😊'];
   if (score >= 80) return ['👍', '🎵', '💫'];
   return ['💖', '🎤', '🌈'];
-}
-
-function startPlaybackSync() {
-  stopPlaybackSync();
-  if (!userIsHost || !ytPlayer?.getCurrentTime) return;
-  playbackSyncTimer = setInterval(() => {
-    if (!userIsHost || !ytPlayer?.getCurrentTime) {
-      stopPlaybackSync();
-      return;
-    }
-    const state = ytPlayer.getPlayerState();
-    const playing = state === YT.PlayerState.PLAYING;
-    const currentTime = ytPlayer.getCurrentTime() || 0;
-    const videoId = currentSong?.videoId || lastSyncedVideoId;
-    if (!videoId) return;
-    lastSyncedVideoId = videoId;
-    socket.emit('playback-sync', {
-      roomId,
-      playback: { videoId, playing, currentTime }
-    });
-  }, 2000);
-}
-
-function stopPlaybackSync() {
-  if (playbackSyncTimer) {
-    clearInterval(playbackSyncTimer);
-    playbackSyncTimer = null;
-  }
-}
-
-function syncToHostPlayback(playback) {
-  if (!playback || !ytPlayer?.seekTo) return;
-  let attempts = 0;
-  const maxAttempts = 10;
-  const interval = setInterval(() => {
-    attempts += 1;
-    try {
-      if (!ytPlayer?.getCurrentTime) {
-        if (attempts >= maxAttempts) clearInterval(interval);
-        return;
-      }
-      const currentTime = ytPlayer.getCurrentTime() || 0;
-      const diff = Math.abs(currentTime - playback.currentTime);
-      if (diff > 3) {
-        ytPlayer.seekTo(playback.currentTime, true);
-      }
-      const state = ytPlayer.getPlayerState();
-      const isPlaying = state === YT.PlayerState.PLAYING;
-      if (playback.playing && !isPlaying) {
-        ytPlayer.playVideo();
-      } else if (!playback.playing && isPlaying) {
-        ytPlayer.pauseVideo();
-      }
-      clearInterval(interval);
-    } catch (e) {
-      if (attempts >= maxAttempts) clearInterval(interval);
-    }
-  }, 500);
 }
 
 function createOrUpdatePlayer(videoId) {
@@ -756,25 +701,26 @@ function triggerEmojiEffect(emoji) {
   container.style.inset = '0';
   container.style.pointerEvents = 'none';
   container.style.overflow = 'hidden';
+  container.style.zIndex = '20';
   videoFrame.appendChild(container);
   const count = 20;
   for (let i = 0; i < count; i += 1) {
     const drop = document.createElement('div');
     drop.textContent = emoji;
     drop.style.position = 'absolute';
-    drop.style.left = `${20 + Math.random() * 60}%`;
-    drop.style.top = `${80 + Math.random() * 20}%`;
-    drop.style.fontSize = `${20 + Math.random() * 18}px`;
+    drop.style.left = `${10 + Math.random() * 80}%`;
+    drop.style.top = '-8%';
+    drop.style.fontSize = `${22 + Math.random() * 22}px`;
     drop.style.opacity = '0.95';
-    drop.style.transform = `translateY(0px) rotate(${Math.random() * 90 - 45}deg)`;
-    drop.style.transition = `transform 2.2s ease-out, opacity 1.2s ease-out`;
+    drop.style.transform = `translateY(0) rotate(${Math.random() * 40 - 20}deg)`;
+    drop.style.transition = `transform ${1.4 + Math.random() * 1.4}s linear, opacity ${1.6 + Math.random() * 1.2}s ease-in`;
     container.appendChild(drop);
     requestAnimationFrame(() => {
-      drop.style.transform = `translateY(-${120 + Math.random() * 80}px) rotate(${Math.random() * 140 - 70}deg)`;
+      drop.style.transform = `translateY(${35 + Math.random() * 25}vh) rotate(${Math.random() * 120 - 60}deg)`;
       drop.style.opacity = '0';
     });
   }
-  setTimeout(() => container.remove(), 2500);
+  setTimeout(() => container.remove(), 3200);
 }
 
 function setupListeners() {
@@ -936,11 +882,6 @@ socket.on('room-state', (state) => {
   if (wasHost && !userIsHost && ytPlayer?.destroy) {
     ytPlayer.destroy();
     ytPlayer = null;
-    stopPlaybackSync();
-  }
-  if (!wasHost && userIsHost) {
-    lastSyncedVideoId = null;
-    startPlaybackSync();
   }
   setHostControls();
   updateParticipantView();
@@ -949,16 +890,10 @@ socket.on('room-state', (state) => {
   renderChat(state.chat);
   updateCurrent(state.current);
   updateRoomCodeOverlay();
-  if (state.playback && !userIsHost) {
-    lastSyncedVideoId = state.playback.videoId;
-    syncToHostPlayback(state.playback);
-  }
 });
 
-socket.on('playback-sync', (playback) => {
-  if (userIsHost) return;
-  lastSyncedVideoId = playback.videoId;
-  syncToHostPlayback(playback);
+socket.on('emoji-rain', (emoji) => {
+  triggerEmojiEffect(emoji);
 });
 
 socket.on('room-error', (message) => {
