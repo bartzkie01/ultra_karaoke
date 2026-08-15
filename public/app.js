@@ -166,7 +166,8 @@ function updateReservedListOverlay(playlist) {
     overlay.innerHTML = '<span class="reserved-list-text">No reserved songs</span>';
     return;
   }
-  const titles = playlist.map((item) => safeText(item.title)).join('  •  ');
+  const sorted = [...playlist].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+  const titles = sorted.map((item) => safeText(item.title)).join('  •  ');
   const doubled = `${titles}  •  ${titles}`;
   overlay.innerHTML = `<span class="reserved-list-text">${doubled}</span>`;
 }

@@ -723,16 +723,16 @@ body {
   display: inline-block;
   white-space: nowrap;
   color: #fff;
-  font-size: clamp(1rem, 1.6vw, 1.6rem);
-  font-weight: 800;
-  line-height: 1.4;
-  -webkit-text-stroke: 0.5px #000;
+  font-size: clamp(0.75rem, 1.1vw, 1.1rem);
+  font-weight: 700;
+  line-height: 1.35;
+  -webkit-text-stroke: 0.4px #000;
   text-shadow:
-    0 0 2px #000,
-    0 0 4px #000,
-    1px 1px 3px #000,
-    0 0 12px rgba(0,0,0,0.8);
-  animation: reservedScroll 16s linear infinite;
+    0 0 1px #000,
+    0 0 3px #000,
+    1px 1px 2px #000,
+    0 0 10px rgba(0,0,0,0.75);
+  animation: reservedScroll 28s linear infinite;
 }
 
 @keyframes reservedScroll {
@@ -762,12 +762,12 @@ body {
 
 :fullscreen .reserved-list-text,
 :-webkit-full-screen .reserved-list-text {
-  font-size: clamp(1.2rem, 2vw, 2.2rem);
+  font-size: clamp(0.9rem, 1.4vw, 1.6rem);
   text-shadow:
-    0 0 4px #000,
-    0 0 8px #000,
-    2px 2px 6px #000,
-    0 0 16px rgba(0,0,0,0.9);
+    0 0 3px #000,
+    0 0 6px #000,
+    1px 1px 4px #000,
+    0 0 14px rgba(0,0,0,0.9);
 }
 
 .video-placeholder {
