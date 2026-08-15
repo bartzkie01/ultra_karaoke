@@ -169,21 +169,21 @@ function updateReservedListOverlay(playlist) {
   const overlay = document.getElementById('reservedListOverlay');
   if (!overlay) return;
   if (!playlist || !playlist.length) {
-    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">No Reserved Songs</span>';
+    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">Next Song: No Reserved Songs</span>';
     return;
   }
   const sorted = [...playlist].sort((a, b) => (a.title || '').localeCompare(b.title || ''));
   const filtered = sorted.map((item) => cleanReservedTitle(item.title)).filter(Boolean);
   if (!filtered.length) {
-    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">No Reserved Songs</span>';
+    overlay.innerHTML = '<span class="reserved-list-text reserved-list-static">Next Song: No Reserved Songs</span>';
     return;
   }
   if (filtered.length === 1) {
-    overlay.innerHTML = `<span class="reserved-list-text reserved-list-static">${safeText(filtered[0])}</span>`;
+    overlay.innerHTML = `<span class="reserved-list-text reserved-list-static">Next Song: ${safeText(filtered[0])}</span>`;
     return;
   }
-  const titles = filtered.join('  •  ');
-  const doubled = `${titles}  •  ${titles}`;
+  const titles = filtered.join('  |  ');
+  const doubled = `Next Song: ${titles}  |  ${titles}`;
   overlay.innerHTML = `<span class="reserved-list-text">${safeText(doubled)}</span>`;
 }
 
