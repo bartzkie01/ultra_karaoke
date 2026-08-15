@@ -356,7 +356,7 @@ function updateCurrent(current) {
     scoreDismissTimer = null;
   }
 
-  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') && ytPlayer;
+  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') && ytPlayer && userIsHost;
   currentSong = current;
   if (isCurrentSongAlreadyRendered) {
     currentTitle.textContent = current.title;
@@ -365,6 +365,7 @@ function updateCurrent(current) {
   if (!current) {
     if (ytPlayer?.destroy) ytPlayer.destroy();
     ytPlayer = null;
+    pendingVideoId = null;
     currentTitle.textContent = 'Waiting for host to start';
     videoFrame.innerHTML = '<div class="video-placeholder">Host will start the karaoke video soon.</div>';
     return;
@@ -373,9 +374,10 @@ function updateCurrent(current) {
 
   if (ytPlayer?.destroy) ytPlayer.destroy();
   ytPlayer = null;
+  pendingVideoId = null;
 
-  const emojis = getScoreEmojis(current.score);
   if (userIsHost) {
+    const emojis = getScoreEmojis(current.score);
     videoFrame.innerHTML = `
       <div class="host-watermark" aria-hidden="true">Ultra Karaoke</div>
       <div class="score-panel" id="scorePanel">
@@ -563,7 +565,7 @@ function onPlayerStateChange(event) {
 
 window.onYouTubeIframeAPIReady = () => {
   youtubeReady = true;
-  if (pendingVideoId) {
+  if (pendingVideoId && userIsHost) {
     loadKaraokeVideo(pendingVideoId);
   }
 };
@@ -700,9 +702,14 @@ function triggerEmojiEffect(emoji) {
   container.style.position = 'absolute';
   container.style.inset = '0';
   container.style.pointerEvents = 'none';
-  container.style.overflow = 'hidden';
+  container.style.overflow = 'visible';
   container.style.zIndex = '20';
-  videoFrame.appendChild(container);
+  const shell = document.querySelector('.video-shell');
+  if (shell) {
+    shell.appendChild(container);
+  } else {
+    videoFrame.appendChild(container);
+  }
   const count = 20;
   for (let i = 0; i < count; i += 1) {
     const drop = document.createElement('div');
