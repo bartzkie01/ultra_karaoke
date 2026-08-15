@@ -52,6 +52,8 @@ let searchController = null;
 let suggestionsController = null;
 let suggestionTimer = null;
 let autoAdvancePending = false;
+let playbackSyncTimer = null;
+let lastSyncedVideoId = null;
 
 function setShareLink() {
   const shareUrl = `${window.location.origin}/room/${roomId}`;
@@ -88,11 +90,11 @@ function safeText(text) {
 }
 
 function setHostControls() {
-  nextBtn.style.display = userIsHost ? '' : 'none';
-  stopBtn.style.display = userIsHost ? '' : 'none';
-  fullscreenBtn.style.display = userIsHost ? '' : 'none';
-  nextBtn.title = userIsHost ? 'Host only control' : 'Participants cannot skip';
-  stopBtn.title = userIsHost ? 'Host only control' : 'Participants cannot stop';
+  nextBtn.style.display = '';
+  stopBtn.style.display = '';
+  fullscreenBtn.style.display = '';
+  nextBtn.title = 'Skip to next song';
+  stopBtn.title = 'Stop playback';
 }
 
 function renderPlaylist(playlist) {
@@ -350,9 +352,7 @@ function updateCurrent(current) {
     scoreDismissTimer = null;
   }
 
-  const participantPlaceholder = document.querySelector('#playerContainer .video-placeholder');
-  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') &&
-    ((userIsHost && ytPlayer) || (!userIsHost && !ytPlayer && participantPlaceholder));
+  const isCurrentSongAlreadyRendered = current && currentSong?.id === current.id && document.getElementById('playerContainer') && ytPlayer;
   currentSong = current;
   if (isCurrentSongAlreadyRendered) {
     currentTitle.textContent = current.title;
@@ -367,8 +367,6 @@ function updateCurrent(current) {
   }
   currentTitle.textContent = current.title;
 
-  // The player is tied to its container. Destroy it before replacing the
-  // container so the next reserved song always receives a live player.
   if (ytPlayer?.destroy) ytPlayer.destroy();
   ytPlayer = null;
 
@@ -391,15 +389,10 @@ function updateCurrent(current) {
   }
 
   pendingVideoId = current.videoId;
-  if (youtubeReady && userIsHost) {
+  if (youtubeReady) {
     loadKaraokeVideo(current.videoId);
-  } else if (userIsHost) {
+  } else {
     ensureYouTubeApi();
-  } else if (!userIsHost) {
-    const placeholder = document.getElementById('playerContainer');
-    if (placeholder) {
-      placeholder.innerHTML = '<div class="video-placeholder">Host controls the karaoke stage. Add songs or cheer with emojis.</div>';
-    }
   }
 }
 
@@ -426,6 +419,64 @@ function getScoreEmojis(score) {
   if (score >= 85) return ['👏', '🎶', '😊'];
   if (score >= 80) return ['👍', '🎵', '💫'];
   return ['💖', '🎤', '🌈'];
+}
+
+function startPlaybackSync() {
+  stopPlaybackSync();
+  if (!userIsHost || !ytPlayer?.getCurrentTime) return;
+  playbackSyncTimer = setInterval(() => {
+    if (!userIsHost || !ytPlayer?.getCurrentTime) {
+      stopPlaybackSync();
+      return;
+    }
+    const state = ytPlayer.getPlayerState();
+    const playing = state === YT.PlayerState.PLAYING;
+    const currentTime = ytPlayer.getCurrentTime() || 0;
+    const videoId = currentSong?.videoId || lastSyncedVideoId;
+    if (!videoId) return;
+    lastSyncedVideoId = videoId;
+    socket.emit('playback-sync', {
+      roomId,
+      playback: { videoId, playing, currentTime }
+    });
+  }, 2000);
+}
+
+function stopPlaybackSync() {
+  if (playbackSyncTimer) {
+    clearInterval(playbackSyncTimer);
+    playbackSyncTimer = null;
+  }
+}
+
+function syncToHostPlayback(playback) {
+  if (!playback || !ytPlayer?.seekTo) return;
+  let attempts = 0;
+  const maxAttempts = 10;
+  const interval = setInterval(() => {
+    attempts += 1;
+    try {
+      if (!ytPlayer?.getCurrentTime) {
+        if (attempts >= maxAttempts) clearInterval(interval);
+        return;
+      }
+      const currentTime = ytPlayer.getCurrentTime() || 0;
+      const diff = Math.abs(currentTime - playback.currentTime);
+      if (diff > 3) {
+        ytPlayer.seekTo(playback.currentTime, true);
+      }
+      const state = ytPlayer.getPlayerState();
+      const isPlaying = state === YT.PlayerState.PLAYING;
+      if (playback.playing && !isPlaying) {
+        ytPlayer.playVideo();
+      } else if (!playback.playing && isPlaying) {
+        ytPlayer.pauseVideo();
+      }
+      clearInterval(interval);
+    } catch (e) {
+      if (attempts >= maxAttempts) clearInterval(interval);
+    }
+  }, 500);
 }
 
 function createOrUpdatePlayer(videoId) {
@@ -496,7 +547,7 @@ function onPlayerApiChange() {
 }
 
 function advanceToNextSong(delay = 0) {
-  if (!userIsHost || autoAdvancePending) return;
+  if (autoAdvancePending) return;
   autoAdvancePending = true;
   setTimeout(() => {
     socket.emit('next-song', { roomId });
@@ -877,6 +928,11 @@ socket.on('room-state', (state) => {
   if (wasHost && !userIsHost && ytPlayer?.destroy) {
     ytPlayer.destroy();
     ytPlayer = null;
+    stopPlaybackSync();
+  }
+  if (!wasHost && userIsHost) {
+    lastSyncedVideoId = null;
+    startPlaybackSync();
   }
   setHostControls();
   updateParticipantView();
@@ -884,6 +940,16 @@ socket.on('room-state', (state) => {
   renderUsers(state.users);
   renderChat(state.chat);
   updateCurrent(state.current);
+  if (state.playback && !userIsHost) {
+    lastSyncedVideoId = state.playback.videoId;
+    syncToHostPlayback(state.playback);
+  }
+});
+
+socket.on('playback-sync', (playback) => {
+  if (userIsHost) return;
+  lastSyncedVideoId = playback.videoId;
+  syncToHostPlayback(playback);
 });
 
 socket.on('room-error', (message) => {

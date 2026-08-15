@@ -65,7 +65,8 @@ function createRoom() {
     bannerVisible: false,
     hostId: null,
     chat: [],
-    lastActiveAt: Date.now()
+    lastActiveAt: Date.now(),
+    playback: null
   };
   rooms.set(id, room);
   saveRoomsSoon();
@@ -80,7 +81,8 @@ function roomState(room) {
     users: Object.values(room.users),
     hostId: room.hostId,
     chat: room.chat,
-    bannerVisible: room.bannerVisible
+    bannerVisible: room.bannerVisible,
+    playback: room.playback
   };
 }
 
@@ -89,6 +91,7 @@ function startNextSong(room) {
   if (room.playlist.length === 0) {
     room.current = null;
     room.bannerVisible = false;
+    room.playback = null;
     return;
   }
   const next = room.playlist.shift();
@@ -100,6 +103,11 @@ function startNextSong(room) {
     score: Math.floor(80 + Math.random() * 21)
   };
   room.bannerVisible = true;
+  room.playback = {
+    videoId: next.videoId,
+    playing: true,
+    currentTime: 0
+  };
 }
 
 loadSavedRooms();
@@ -661,8 +669,6 @@ io.on('connection', (socket) => {
       const room = rooms.get(roomId);
       if (!room) return;
       touchRoom(room);
-      const user = room.users[socket.id];
-      if (!user?.isHost) return;
       startNextSong(room);
       io.to(roomId).emit('room-state', roomState(room));
     } catch (err) {
@@ -675,13 +681,26 @@ io.on('connection', (socket) => {
       const room = rooms.get(roomId);
       if (!room) return;
       touchRoom(room);
-      const user = room.users[socket.id];
-      if (!user?.isHost) return;
       room.current = null;
       room.bannerVisible = false;
+      room.playback = null;
       io.to(roomId).emit('room-state', roomState(room));
     } catch (err) {
       console.error('stop-play error:', err.message);
+    }
+  });
+
+  socket.on('playback-sync', ({ roomId, playback }) => {
+    try {
+      const room = rooms.get(roomId);
+      if (!room) return;
+      const user = room.users[socket.id];
+      if (!user?.isHost) return;
+      touchRoom(room);
+      room.playback = playback;
+      socket.to(roomId).emit('playback-sync', playback);
+    } catch (err) {
+      console.error('playback-sync error:', err.message);
     }
   });
 
