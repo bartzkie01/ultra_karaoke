@@ -396,7 +396,7 @@ function updateCurrent(current) {
     }
   } else {
     videoFrame.innerHTML = `
-      <div class="video-placeholder">Host is playing: ${safeText(current.title)}</div>
+      <div class="participant-placeholder">Host is playing: ${safeText(current.title)}</div>
     `;
   }
 
