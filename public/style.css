@@ -767,11 +767,42 @@ body {
 :fullscreen .reserved-list-text,
 :-webkit-full-screen .reserved-list-text {
   font-size: clamp(0.75rem, 1.1vw, 1.1rem);
+   text-shadow:
+     0 0 3px #000,
+     0 0 6px #000,
+     1px 1px 4px #000,
+     0 0 14px rgba(0,0,0,0.9);
+}
+
+.room-code-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  left: auto;
+  z-index: 10;
+  padding: 3px 10px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.3;
+  -webkit-text-stroke: 0.3px #000;
   text-shadow:
+    0 0 1px #000,
     0 0 3px #000,
-    0 0 6px #000,
-    1px 1px 4px #000,
-    0 0 14px rgba(0,0,0,0.9);
+    1px 1px 2px #000,
+    0 0 8px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+
+:fullscreen .room-code-overlay,
+:-webkit-full-screen .room-code-overlay {
+  top: 24px;
+  right: 24px;
+  font-size: 0.85rem;
 }
 
 .video-placeholder {

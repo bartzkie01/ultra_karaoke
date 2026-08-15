@@ -592,11 +592,13 @@ io.on('connection', (socket) => {
   socket.on('join-room', ({ roomId, name }) => {
     try {
       const normalizedRoomId = String(roomId || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      console.log(`[join-room] socket=${socket.id} roomId=${normalizedRoomId} rooms=${rooms.size}`);
       if (!/^[A-HJ-NP-Z2-9]{6}$/.test(normalizedRoomId)) {
         socket.emit('room-error', 'Invalid room code');
         return;
       }
       const room = rooms.get(normalizedRoomId);
+      console.log(`[join-room] lookup result=${room ? 'found' : 'MISSING'} room.users=${room ? Object.keys(room.users).length : 'n/a'}`);
       if (!room) {
         socket.emit('room-error', 'This room has expired or is unavailable. Ask the host for a new link.');
         return;

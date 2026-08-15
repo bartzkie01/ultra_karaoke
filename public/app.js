@@ -74,6 +74,11 @@ function setShareLink() {
   };
 }
 
+function updateRoomCodeOverlay() {
+  const overlay = document.getElementById('roomCodeOverlay');
+  if (overlay) overlay.textContent = roomId;
+}
+
 function showModal() {
   nameModal.style.display = 'flex';
   nameInput.focus();
@@ -892,6 +897,7 @@ function scheduleJoinTimeout() {
 function emitJoin() {
   joining = true;
   scheduleJoinTimeout();
+  console.log(`[client] emit join-room roomId=${roomId} name=${userName} socketConnected=${socket.connected}`);
   socket.emit('join-room', { roomId, name: userName });
 }
 
@@ -919,6 +925,7 @@ socket.on('connect', () => {
 });
 
 socket.on('room-state', (state) => {
+  console.log(`[client] room-state received hostId=${state.hostId} socketId=${socket.id} playlist=${state.playlist.length}`);
   clearJoinTimeout();
   joining = false;
   autoAdvancePending = false;
@@ -940,6 +947,7 @@ socket.on('room-state', (state) => {
   renderUsers(state.users);
   renderChat(state.chat);
   updateCurrent(state.current);
+  updateRoomCodeOverlay();
   if (state.playback && !userIsHost) {
     lastSyncedVideoId = state.playback.videoId;
     syncToHostPlayback(state.playback);
@@ -953,6 +961,7 @@ socket.on('playback-sync', (playback) => {
 });
 
 socket.on('room-error', (message) => {
+  console.log(`[client] room-error: ${message}`);
   clearJoinTimeout();
   joining = false;
   alert(message);
@@ -1007,5 +1016,6 @@ const playlistObserver = new MutationObserver(() => {
 playlistObserver.observe(playlistEl, { childList: true, subtree: true });
 
 setShareLink();
+updateRoomCodeOverlay();
 setupListeners();
 fetchSearch('karaoke', 12);
