@@ -1036,10 +1036,6 @@ body {
   background: linear-gradient(180deg, rgba(10,16,30,0.95), rgba(1,4,10,0.95));
 }
 
-.top-banner.visible {
-  transform: translate(-50%, 0);
-}
-
 .chat-list {
   min-height: 130px;
   max-height: 190px;
