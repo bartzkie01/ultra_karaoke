@@ -712,7 +712,7 @@ body {
   left: 10px;
   right: auto;
   z-index: 10;
-  max-width: 50%;
+  max-width: 420px;
   overflow: hidden;
   pointer-events: none;
   opacity: 0.95;
@@ -746,7 +746,7 @@ body {
 
 @media (max-width: 640px) {
   .reserved-list-overlay {
-    max-width: 60%;
+    max-width: 260px;
     top: 8px;
     left: 8px;
   }
@@ -760,7 +760,7 @@ body {
 :-webkit-full-screen .reserved-list-overlay {
   top: 24px;
   left: 24px;
-  max-width: 60%;
+  max-width: 420px;
   opacity: 1;
 }
 
