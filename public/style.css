@@ -832,15 +832,15 @@ body {
   left: 50%;
   top: 18px;
   transform: translateX(-50%);
-  background: rgba(3, 12, 25, 0.85);
-  border: 1px solid rgba(255,255,255,0.18);
-  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  background: rgba(3, 12, 25, 0.95);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   border-radius: 30px;
-  padding: 18px 26px;
+  padding: 22px 32px;
   display: grid;
-  gap: 10px;
+  gap: 12px;
   justify-items: center;
-  width: min(92%, 420px);
+  width: min(92%, 440px);
   opacity: 0;
   pointer-events: none;
   z-index: 10;
@@ -854,14 +854,14 @@ body {
 
 .score-panel h3 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.1rem;
   color: #b1d8ff;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .score-panel .score-value {
-  font-size: clamp(2rem, 4vw, 3.4rem);
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--accent);
@@ -869,14 +869,14 @@ body {
 
 .score-panel .score-comment {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.05rem;
   color: #e5f5ff;
 }
 
 .score-panel .score-emojis {
   display: flex;
   gap: 10px;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
 }
 
 @keyframes scorePop {
